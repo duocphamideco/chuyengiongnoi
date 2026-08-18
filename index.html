@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IDECO AI Voice Studio</title>
+<style>
+:root{
+  --bg:#f4f7fb;--card:#fff;--ink:#132238;--muted:#6c7a90;--line:#dce5f0;
+  --blue:#2563eb;--blue2:#1d4ed8;--green:#0b8f67;--red:#c83e3e;--amber:#946200;
+  --shadow:0 16px 42px rgba(20,40,75,.10)
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--ink);background:linear-gradient(180deg,#eaf3ff 0,#f7f9fc 290px,#f4f7fb 100%)}
+.wrap{max-width:1200px;margin:auto}
+header{padding:24px 18px 12px}
+.brand{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+h1{font-size:clamp(27px,4vw,40px);margin:5px 0 3px;letter-spacing:-.03em}
+.sub{color:var(--muted);margin:0}
+.badge{display:inline-block;background:#e8f1ff;color:#2457ad;border-radius:999px;padding:5px 9px;font-size:11px;font-weight:850}
+.gear,.btn{border:0;border-radius:12px;padding:11px 14px;font:inherit;font-weight:800;cursor:pointer}
+.gear{background:#fff;border:1px solid var(--line);box-shadow:0 5px 18px rgba(0,0,0,.05);white-space:nowrap}
+main{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;padding:10px 18px 34px}
+@media(max-width:920px){main{grid-template-columns:1fr}.brand{align-items:flex-start}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+.card h2{font-size:17px;margin:0 0 13px}
+label,.label{display:block;margin:12px 0 7px;font-size:13px;font-weight:850}
+textarea,input,select{width:100%;border:1px solid #cbd7e6;border-radius:12px;padding:12px 13px;background:#fff;font:inherit;color:var(--ink);outline:none}
+textarea:focus,input:focus,select:focus{border-color:#6d9bf5;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+textarea{min-height:280px;resize:vertical;line-height:1.55}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:620px){.row,.row3{grid-template-columns:1fr}}
+.toolbar,.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue2)}
+.btn-soft{background:#edf3ff;color:#1c4eaa}
+.btn-good{background:#e6f9f1;color:#087252}
+.btn-danger{background:#fff0f0;color:#ae3030}
+.btn:disabled{opacity:.52;cursor:not-allowed}
+.pill{border:1px solid #d5e2f3;background:#f8fbff;border-radius:999px;padding:8px 11px;font-size:13px;font-weight:750;color:#315477;cursor:pointer}
+.pill.active{background:#e4edff;border-color:#7098ed;color:#1747a0}
+.status{margin-top:12px;padding:10px 12px;border-radius:12px;background:#f4f7fb;color:#526277;font-size:13px;white-space:pre-wrap}
+.status.ok{background:#eaf9f3;color:#087252}.status.err{background:#fff0f0;color:#ad3232}.status.busy{background:#fff7e3;color:#805900}
+.count{text-align:right;color:var(--muted);font-size:11px;margin-top:5px}
+hr{border:0;border-top:1px solid var(--line);margin:18px 0}
+.audioBox{border:1px dashed #b9cae4;border-radius:16px;background:#fbfdff;padding:14px}
+.wave{height:78px;display:flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(#f4f8ff,#fff);border-radius:12px;overflow:hidden}
+.wave span{width:5px;height:15px;border-radius:6px;background:#4f7ee8;animation:pulse 1.05s ease-in-out infinite;animation-play-state:paused}
+.wave.playing span{animation-play-state:running}.wave span:nth-child(3n){animation-delay:.16s}.wave span:nth-child(4n){animation-delay:.32s}.wave span:nth-child(5n){animation-delay:.48s}
+@keyframes pulse{0%,100%{height:13px;opacity:.4}50%{height:57px;opacity:1}}
+audio{width:100%;margin-top:10px}
+.note{background:#fff9e9;border-left:4px solid #e2a624;color:#76580a;border-radius:9px;padding:10px 12px;font-size:12px;margin-top:12px}
+.modal{display:none;position:fixed;inset:0;background:rgba(10,20,37,.55);z-index:20;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modalCard{width:min(760px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:18px;box-shadow:0 28px 85px rgba(0,0,0,.28)}
+.modalHead{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.close{border:0;width:36px;height:36px;border-radius:10px;background:#edf1f6;font-size:18px;cursor:pointer}
+.keyrow{display:grid;grid-template-columns:1fr auto;gap:8px}
+.small{font-size:12px;color:var(--muted)}
+.inline{display:flex;gap:8px;align-items:center}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap brand">
+    <div>
+      <span class="badge">Gemini 3.1 Flash TTS</span>
+      <h1>IDECO AI Voice Studio</h1>
+      <p class="sub">Giọng nói → văn bản • AI soạn lại • Văn bản → giọng nói chuyên nghiệp</p>
+    </div>
+    <button class="gear" id="openSettings">⚙️ Cài đặt</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card">
+    <h2>1. Nội dung cần đọc</h2>
+    <textarea id="text" placeholder="Nhập nội dung tại đây hoặc bấm 🎙️ Nói thành văn bản..."></textarea>
+    <div class="count"><span id="charCount">0</span> ký tự</div>
+    <div class="toolbar">
+      <button class="btn btn-good" id="micBtn">🎙️ Ghi âm → Văn bản</button>
+      <button class="btn btn-soft" id="stopMicBtn" disabled>⏹ Dừng & chép lời</button>
+      <button class="btn btn-soft" id="uploadAudioBtn">📁 Chọn file ghi âm</button>
+      <input id="audioFileInput" type="file" accept="audio/*" class="hidden">
+      <button class="btn btn-danger" id="clearBtn">Xóa</button>
+    </div>
+    <div id="micStatus" class="status">Trên mobile, ứng dụng ưu tiên ghi âm bằng micro rồi dùng Gemini để chép lời. Micro trình duyệt cần quyền truy cập và thường cần HTTPS.</div>
+
+    <hr>
+    <h2>2. AI soạn lại trước khi đọc</h2>
+    <div class="label">Phong cách nội dung</div>
+    <div class="pills" id="rewriteStyles">
+      <button class="pill active" data-style="Tự nhiên">Tự nhiên</button>
+      <button class="pill" data-style="Trao đổi">Trao đổi</button>
+      <button class="pill" data-style="Hài hước">Hài hước</button>
+      <button class="pill" data-style="Hội thảo">Hội thảo</button>
+      <button class="pill" data-style="Đào tạo">Đào tạo</button>
+      <button class="pill" data-style="Podcast">Podcast</button>
+    </div>
+    <label>Yêu cầu thêm cho AI (không bắt buộc)</label>
+    <input id="rewriteExtra" placeholder="Ví dụ: ngắn hơn 20%, giữ nguyên số liệu/tên sản phẩm...">
+    <div class="toolbar">
+      <button class="btn btn-primary" id="rewriteBtn">✨ AI soạn lại</button>
+      <button class="btn btn-soft" id="undoBtn" disabled>↩️ Trở lại bản trước</button>
+    </div>
+    <div id="rewriteStatus" class="status">AI sẽ chỉ sửa nội dung khi bạn bấm “AI soạn lại”. Bạn vẫn có thể chỉnh tay trước khi tạo giọng.</div>
+  </section>
+
+  <section class="card">
+    <h2>3. Thiết lập giọng đọc</h2>
+    <div class="row">
+      <div>
+        <label>Nhóm giọng</label>
+        <select id="gender">
+          <option value="all">Tất cả giọng</option>
+          <option value="female">Ưu tiên giọng Nữ</option>
+          <option value="male">Ưu tiên giọng Nam</option>
+        </select>
+      </div>
+      <div>
+        <label>Giọng AI Studio</label>
+        <select id="voice"></select>
+      </div>
+    </div>
+
+    <label>Phong cách đọc</label>
+    <select id="readStyle">
+      <option value="Đọc tự nhiên, thân thiện, rõ ràng, giống trò chuyện trực tiếp.">Tự nhiên</option>
+      <option value="Đọc chuyên nghiệp, chắc chắn, rõ chữ, phù hợp hội thảo và thuyết trình.">Hội thảo</option>
+      <option value="Đọc như người hướng dẫn đào tạo, mạch lạc, nhấn đúng trọng tâm.">Đào tạo</option>
+      <option value="Đọc phong cách podcast gần gũi, giàu nhịp điệu, có cảm xúc tự nhiên.">Podcast</option>
+      <option value="Đọc vui vẻ, hài hước vừa phải, duyên dáng, không diễn quá mức.">Hài hước</option>
+      <option value="Đọc ấm áp, truyền cảm, cảm xúc tinh tế và chân thật.">Truyền cảm</option>
+      <option value="Đọc năng lượng cao, tươi sáng, tạo động lực nhưng vẫn rõ lời.">Năng lượng</option>
+      <option value="Đọc trang trọng, điềm tĩnh, rõ ràng và có uy tín.">Trang trọng</option>
+    </select>
+
+    <div class="row3">
+      <div>
+        <label>Tốc độ</label>
+        <select id="pace">
+          <option>Chậm</option><option selected>Vừa phải</option><option>Nhanh</option>
+        </select>
+      </div>
+      <div>
+        <label>Cảm xúc</label>
+        <select id="emotion">
+          <option selected>Tự nhiên</option><option>Ấm áp</option><option>Hào hứng</option><option>Điềm tĩnh</option><option>Tin cậy</option>
+        </select>
+      </div>
+      <div>
+        <label>Độ nhấn</label>
+        <select id="emphasis">
+          <option>Nhẹ</option><option selected>Vừa</option><option>Rõ</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Chỉ dẫn đọc riêng (không bắt buộc)</label>
+    <input id="voiceInstruction" placeholder="Ví dụ: ngắt nhẹ sau mỗi ý, đọc số tiền thật rõ...">
+
+    <div class="row">
+      <div>
+        <label>Ổn định giọng khi nội dung dài</label>
+        <select id="stabilityMode">
+          <option value="auto" selected>Tự động — khuyên dùng</option>
+          <option value="single">Một lượt — nội dung ngắn</option>
+          <option value="chunk">Chia đoạn & ghép WAV</option>
+        </select>
+      </div>
+      <div>
+        <label>Độ dài mỗi đoạn</label>
+        <select id="chunkSize">
+          <option value="900">~900 ký tự</option>
+          <option value="1300" selected>~1.300 ký tự</option>
+          <option value="1800">~1.800 ký tự</option>
+        </select>
+      </div>
+    </div>
+
+    <hr>
+    <h2>4. Tạo giọng nói</h2>
+    <button class="btn btn-primary" style="width:100%;font-size:16px;padding:14px" id="ttsBtn">🔊 Chuyển văn bản thành giọng nói</button>
+    <div id="ttsStatus" class="status">Sẵn sàng tạo âm thanh bằng <code>gemini-3.1-flash-tts-preview</code> qua GenerateContent API.</div>
+
+    <div class="audioBox" style="margin-top:14px">
+      <div id="wave" class="wave">
+        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <audio id="audio" controls></audio>
+      <div class="toolbar">
+        <button class="btn btn-soft" id="downloadBtn" disabled>⬇️ Tải file WAV</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- PASSWORD MODAL -->
+<div class="modal" id="passModal">
+  <div class="modalCard" style="max-width:430px">
+    <div class="modalHead"><h2 style="margin:0">🔐 Mở Cài đặt</h2><button class="close" data-close="passModal">×</button></div>
+    <p class="small">Nhập mật khẩu quản trị để xem hoặc thay đổi API.</p>
+    <label>Mật khẩu</label>
+    <input type="password" id="settingsPassword" autocomplete="off" placeholder="Nhập mật khẩu">
+    <button class="btn btn-primary" id="unlockBtn" style="width:100%;margin-top:12px">Mở Cài đặt</button>
+    <div id="passStatus" class="status hidden"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="settingsModal">
+  <div class="modalCard">
+    <div class="modalHead"><h2 style="margin:0">⚙️ Cài đặt hệ thống</h2><button class="close" data-close="settingsModal">×</button></div>
+
+    <h3>Gemini API — 3 khóa dự phòng</h3>
+    <p class="small">Ứng dụng ưu tiên API 01 → 02 → 03. Khi key đang dùng lỗi/quota/server, ứng dụng tự thử key kế tiếp. <b>Nếu các key thuộc cùng một Google Project, quota vẫn dùng chung theo Project.</b></p>
+
+    <label>API 01 — Chính</label>
+    <div class="keyrow">
+      <input type="password" id="geminiKey1" autocomplete="off" placeholder="Nhập Gemini API key 01">
+      <button class="btn btn-soft keyToggle" data-target="geminiKey1">👁 Hiện</button>
+    </div>
+
+    <label>API 02 — Dự phòng</label>
+    <div class="keyrow">
+      <input type="password" id="geminiKey2" autocomplete="off" placeholder="Nhập Gemini API key 02">
+      <button class="btn btn-soft keyToggle" data-target="geminiKey2">👁 Hiện</button>
+    </div>
+
+    <label>API 03 — Dự phòng</label>
+    <div class="keyrow">
+      <input type="password" id="geminiKey3" autocomplete="off" placeholder="Nhập Gemini API key 03">
+      <button class="btn btn-soft keyToggle" data-target="geminiKey3">👁 Hiện</button>
+    </div>
+    <div class="small" id="keyInfo">Chưa nạp API key.</div>
+
+    <div class="row">
+      <div>
+        <label>Model AI soạn lại</label>
+        <input id="rewriteModel" value="gemini-3.7-flash">
+      </div>
+      <div>
+        <label>Model Text-to-Speech</label>
+        <input id="ttsModel" value="gemini-3.1-flash-tts-preview" readonly>
+      </div>
+    </div>
+
+    <hr>
+    <h3>Firebase Realtime Database</h3>
+    <div class="status ok">Đã gắn dự án Firebase: <b>dulieu04</b> • Auth domain: dulieu04.firebaseapp.com</div>
+    <p class="small">Toàn bộ thông số Firebase Project và Realtime Database URL đã được gắn sẵn. Bạn chỉ cần nhập Gemini API Key rồi bấm <b>Lưu & đồng bộ Firebase</b>.</p>
+    <label>Firebase Realtime Database URL</label>
+    <input id="firebaseUrl" value="https://dulieu04-default-rtdb.firebaseio.com" readonly>
+    <div class="small">Đã gắn cố định Realtime Database của dự án <b>dulieu04</b>. Không cần nhập lại trên máy khác.</div>
+    <label>Đường dẫn lưu cấu hình</label>
+    <input id="firebasePath" value="ideco_ai_voice_studio/settings">
+    <div class="toolbar">
+      <button class="btn btn-soft" id="testFirebaseBtn">🔄 Đọc thử từ Firebase</button>
+      <button class="btn btn-soft" id="testGeminiBtn">🧪 Kiểm tra Gemini API</button>
+      <button class="btn btn-primary" id="saveSettingsBtn">💾 Lưu & đồng bộ Firebase</button>
+    </div>
+    <div id="settingsStatus" class="status ok">Firebase Project <b>dulieu04</b> và Realtime Database đã được cấu hình sẵn. Chỉ cần nhập Gemini API Key rồi bấm “Lưu & đồng bộ Firebase”.</div>
+    <div class="note"><b>Lưu ý bảo mật:</b> mật khẩu khóa Cài đặt trong file HTML chỉ là lớp bảo vệ giao diện. Với môi trường triển khai rộng, nên dùng Firebase Authentication/Rules hoặc máy chủ trung gian để bảo vệ API key chặt hơn.</div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const ADMIN_PASS = 'minhtriet1973';
+  const LOCAL_KEY = 'idecoVoiceStudioConfigV1';
+
+  // Firebase project configuration supplied by IDECO.
+  // Realtime Database still requires its databaseURL endpoint.
+  const FIREBASE_DATABASE_URL = "https://dulieu04-default-rtdb.firebaseio.com";
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyC2J1hfHBIiu-JFvnTTqjPXqDJ-HzLtv8E",
+    authDomain: "dulieu04.firebaseapp.com",
+    projectId: "dulieu04",
+    storageBucket: "dulieu04.firebasestorage.app",
+    messagingSenderId: "43658511953",
+    appId: "1:43658511953:web:4193eb29c5da664a9eda70",
+    measurementId: "G-11FGTYT1WN"
+  };
+
+  const voices = [
+    ['Zephyr','Sáng, rõ','female'],['Puck','Tươi, năng động','male'],['Charon','Thông tin, điềm tĩnh','male'],
+    ['Kore','Chắc chắn','female'],['Fenrir','Hào hứng','male'],['Leda','Trẻ trung','female'],
+    ['Orus','Chắc chắn','male'],['Aoede','Thoáng, nhẹ','female'],['Callirrhoe','Thoải mái','female'],
+    ['Autonoe','Sáng','female'],['Enceladus','Hơi thở, mềm','male'],['Iapetus','Rõ ràng','male'],
+    ['Umbriel','Thoải mái','male'],['Algieba','Mượt','male'],['Despina','Mượt','female'],
+    ['Erinome','Rõ ràng','female'],['Algenib','Khàn nhẹ','male'],['Rasalgethi','Thông tin','male'],
+    ['Laomedeia','Tươi vui','female'],['Achernar','Mềm','female'],['Alnilam','Chắc','male'],
+    ['Schedar','Cân bằng','male'],['Gacrux','Trưởng thành','female'],['Pulcherrima','Tiến về trước','female'],
+    ['Achird','Thân thiện','male'],['Zubenelgenubi','Đời thường','male'],['Vindemiatrix','Dịu dàng','female'],
+    ['Sadachbia','Sinh động','male'],['Sadaltager','Hiểu biết','male'],['Sulafat','Ấm áp','female']
+  ];
+
+  let previousText = '';
+  let recognition = null;
+  let wavBlob = null;
+  let objectUrl = null;
+  let runtimeKeys = ['', '', ''];
+  let activeKeyIndex = 0;
+
+  function setStatus(el, msg, cls='') {
+    el.className = 'status' + (cls ? ' '+cls : '');
+    el.textContent = msg;
+  }
+  function escPath(p){ return (p||'ideco_ai_voice_studio/settings').replace(/^\/+|\/+$/g,''); }
+  function normalizeDbUrl(u){ return (u||'').trim().replace(/\/+$/,''); }
+
+  function loadLocal(){
+    try{
+      const c = JSON.parse(localStorage.getItem(LOCAL_KEY)||'{}');
+      $('firebaseUrl').value = c.firebaseUrl || FIREBASE_DATABASE_URL;
+      $('firebasePath').value = c.firebasePath || 'ideco_ai_voice_studio/settings';
+      $('rewriteModel').value = c.rewriteModel || 'gemini-3.7-flash';
+      runtimeKeys = [
+        c.geminiKeys?.[0] || c.geminiKey || '',
+        c.geminiKeys?.[1] || '',
+        c.geminiKeys?.[2] || ''
+      ];
+      $('geminiKey1').value = runtimeKeys[0];
+      $('geminiKey2').value = runtimeKeys[1];
+      $('geminiKey3').value = runtimeKeys[2];
+      updateKeyInfo();
+    }catch(e){}
+  }
+  function saveLocal(){
+    const keys=[
+      $('geminiKey1').value.trim(),
+      $('geminiKey2').value.trim(),
+      $('geminiKey3').value.trim()
+    ];
+    const c = {
+      geminiKeys:keys,
+      firebaseUrl:FIREBASE_DATABASE_URL,
+      firebasePath:escPath($('firebasePath').value),
+      rewriteModel:$('rewriteModel').value.trim() || 'gemini-3.7-flash'
+    };
+    localStorage.setItem(LOCAL_KEY,JSON.stringify(c));
+    runtimeKeys = keys;
+    if(!runtimeKeys[activeKeyIndex]) activeKeyIndex = runtimeKeys.findIndex(Boolean);
+    if(activeKeyIndex < 0) activeKeyIndex = 0;
+    return c;
+  }
+  function updateKeyInfo(){
+    const keys=[
+      $('geminiKey1').value.trim(),
+      $('geminiKey2').value.trim(),
+      $('geminiKey3').value.trim()
+    ];
+    const ready=keys.map((k,i)=>k?`API 0${i+1}: ${k.slice(0,4)}••••${k.slice(-4)} (${k.length} ký tự)`:`API 0${i+1}: trống`);
+    $('keyInfo').textContent = ready.join(' • ');
+  }
+
+  async function firebaseRead(silent=false){
+    const url=FIREBASE_DATABASE_URL, path=escPath($('firebasePath').value);
+    if(!url) throw new Error('Chưa nhập Firebase Realtime Database URL.');
+    const res=await fetch(`${url}/${path}.json`,{cache:'no-store'});
+    if(!res.ok) throw new Error(`Firebase trả lỗi ${res.status}. Kiểm tra Database URL và Rules.`);
+    const data=await res.json();
+    if(!data) throw new Error('Chưa có cấu hình trên Firebase tại đường dẫn này.');
+    const fromFb = data.geminiKeys || (data.geminiKey ? [data.geminiKey,'',''] : null);
+    if(fromFb){
+      runtimeKeys=[fromFb[0]||'',fromFb[1]||'',fromFb[2]||''];
+      $('geminiKey1').value=runtimeKeys[0];
+      $('geminiKey2').value=runtimeKeys[1];
+      $('geminiKey3').value=runtimeKeys[2];
+    }
+    if(data.rewriteModel) $('rewriteModel').value=data.rewriteModel;
+    localStorage.setItem(LOCAL_KEY,JSON.stringify({
+      geminiKeys:runtimeKeys,
+      firebaseUrl:url,
+      firebasePath:path,
+      rewriteModel:$('rewriteModel').value.trim()||'gemini-3.7-flash'
+    }));
+    updateKeyInfo();
+    if(!silent) setStatus($('settingsStatus'),'Đã đọc cấu hình Gemini từ Firebase thành công.','ok');
+    return data;
+  }
+
+  async function firebaseWrite(){
+    const c=saveLocal();
+    if(!c.firebaseUrl) throw new Error('Chưa nhập Firebase Realtime Database URL.');
+    if(!c.geminiKeys.some(Boolean)) throw new Error('Chưa nhập Gemini API Key.');
+    const payload={
+      geminiKeys:c.geminiKeys,
+      rewriteModel:c.rewriteModel,
+      ttsModel:'gemini-3.1-flash-tts-preview',
+      updatedAt:new Date().toISOString()
+    };
+    const res=await fetch(`${c.firebaseUrl}/${c.firebasePath}.json`,{
+      method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error(`Không lưu được Firebase (${res.status}). Kiểm tra Rules.`);
+    return await res.json();
+  }
+
+  function getAvailableKeys(){
+    const keys = runtimeKeys.map((key,index)=>({key,index})).filter(x=>x.key);
+    if(!keys.length) return [];
+    const ordered=[];
+    for(let offset=0; offset<3; offset++){
+      const idx=(activeKeyIndex+offset)%3;
+      const found=keys.find(x=>x.index===idx);
+      if(found) ordered.push(found);
+    }
+    return ordered;
+  }
+
+  async function ensureKeys(){
+    if(runtimeKeys.some(Boolean)) return getAvailableKeys();
+    loadLocal();
+    if(runtimeKeys.some(Boolean)) return getAvailableKeys();
+    try{ await firebaseRead(true); }catch(e){}
+    if(!runtimeKeys.some(Boolean)) throw new Error('Chưa có Gemini API Key. Vào ⚙️ Cài đặt để nhập API 01/02/03.');
+    return getAvailableKeys();
+  }
+
+  function shouldRotateKey(status, data, err){
+    const msg=(data?.error?.message || err?.message || '').toLowerCase();
+    return status===429 || status===401 || status===403 || status>=500 ||
+      msg.includes('resource_exhausted') || msg.includes('quota') ||
+      msg.includes('api key') || msg.includes('failed to fetch') ||
+      msg.includes('network');
+  }
+
+  async function geminiFetchWithFailover(url, optionsFactory, label='Gemini'){
+    const pool=await ensureKeys();
+    let lastErr=null;
+    for(let attempt=0; attempt<pool.length; attempt++){
+      const item=pool[attempt];
+      try{
+        const opts=optionsFactory(item.key, item.index);
+        const res=await fetch(url, opts);
+        let data={}; try{data=await res.clone().json()}catch(e){}
+        if(res.ok){
+          activeKeyIndex=item.index;
+          return {res,data,keyIndex:item.index};
+        }
+        const msg=data?.error?.message || `${label} lỗi HTTP ${res.status}`;
+        lastErr=new Error(msg);
+        if(!shouldRotateKey(res.status,data,lastErr)) throw lastErr;
+      }catch(e){
+        lastErr=e;
+        if(!shouldRotateKey(0,null,e)) throw e;
+      }
+    }
+    throw new Error((lastErr?.message || `${label} thất bại`) + ' — đã thử toàn bộ API dự phòng.');
+  }
+
+  function renderVoices(){
+    const filter=$('gender').value;
+    const selected=$('voice').value;
+    $('voice').innerHTML='';
+    voices.filter(v=>filter==='all'||v[2]===filter).forEach(v=>{
+      const o=document.createElement('option'); o.value=v[0]; o.textContent=`${v[0]} — ${v[1]}`; $('voice').appendChild(o);
+    });
+    if([...$('voice').options].some(o=>o.value===selected)) $('voice').value=selected;
+    else if(filter==='female') $('voice').value='Kore';
+    else if(filter==='male') $('voice').value='Puck';
+  }
+
+  function updateCount(){ $('charCount').textContent=$('text').value.length.toLocaleString('vi-VN'); }
+
+  $('openSettings').onclick=()=>{ $('settingsPassword').value=''; $('passStatus').classList.add('hidden'); $('passModal').classList.add('open'); setTimeout(()=>$('settingsPassword').focus(),80); };
+  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove('open'));
+  document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+
+  function unlock(){
+    if($('settingsPassword').value===ADMIN_PASS){
+      $('passModal').classList.remove('open'); loadLocal(); $('settingsModal').classList.add('open');
+    }else{
+      $('passStatus').classList.remove('hidden'); setStatus($('passStatus'),'Mật khẩu không đúng.','err'); $('settingsPassword').select();
+    }
+  }
+  $('unlockBtn').onclick=unlock;
+  $('settingsPassword').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+
+  document.querySelectorAll('.keyToggle').forEach(btn=>btn.onclick=()=>{
+    const i=$(btn.dataset.target);
+    i.type=i.type==='password'?'text':'password';
+    btn.textContent=i.type==='password'?'👁 Hiện':'🙈 Ẩn';
+  });
+  ['geminiKey1','geminiKey2','geminiKey3'].forEach(id=>$(id).addEventListener('input',updateKeyInfo));
+
+  $('saveSettingsBtn').onclick=async()=>{
+    try{
+      setStatus($('settingsStatus'),'Đang lưu cấu hình...','busy');
+      saveLocal();
+      if($('firebaseUrl').value.trim()){
+        await firebaseWrite();
+        setStatus($('settingsStatus'),'Đã lưu API key trên máy này và đồng bộ lên Firebase Realtime Database.','ok');
+      }else{
+        setStatus($('settingsStatus'),'Đã lưu trên máy này. Chưa đồng bộ Firebase vì Database URL đang để trống.','ok');
+      }
+    }catch(e){setStatus($('settingsStatus'),e.message,'err')}
+  };
+  $('testFirebaseBtn').onclick=async()=>{
+    try{setStatus($('settingsStatus'),'Đang đọc cấu hình từ Firebase...','busy'); await firebaseRead(false)}
+    catch(e){setStatus($('settingsStatus'),e.message,'err')}
+  };
+
+  $('testGeminiBtn').onclick=async()=>{
+    try{
+      setStatus($('settingsStatus'),'Đang kiểm tra lần lượt API 01/02/03...','busy');
+      saveLocal();
+      const pool=await ensureKeys();
+      const lines=[];
+      for(const item of pool){
+        try{
+          const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models',{
+            method:'GET',headers:{'x-goog-api-key':item.key}
+          });
+          let d={}; try{d=await r.json()}catch(e){}
+          lines.push(`API 0${item.index+1}: ${r.ok?'OK':('LỖI '+r.status)}${!r.ok&&d?.error?.message?' — '+d.error.message:''}`);
+        }catch(e){
+          lines.push(`API 0${item.index+1}: lỗi kết nối`);
+        }
+      }
+      setStatus($('settingsStatus'),lines.join('\\n'),lines.some(x=>x.includes(': OK'))?'ok':'err');
+    }catch(e){setStatus($('settingsStatus'),e.message,'err')}
+  };
+
+  $('text').addEventListener('input',updateCount);
+  $('clearBtn').onclick=()=>{$('text').value='';updateCount()};
+  $('gender').onchange=renderVoices;
+
+  document.querySelectorAll('#rewriteStyles .pill').forEach(p=>p.onclick=()=>{
+    document.querySelectorAll('#rewriteStyles .pill').forEach(x=>x.classList.remove('active'));
+    p.classList.add('active');
+  });
+
+  $('rewriteBtn').onclick=async()=>{
+    const txt=$('text').value.trim();
+    if(!txt){setStatus($('rewriteStatus'),'Hãy nhập nội dung trước.','err');return}
+    const style=document.querySelector('#rewriteStyles .pill.active')?.dataset.style||'Tự nhiên';
+    const extra=$('rewriteExtra').value.trim();
+    try{
+      $('rewriteBtn').disabled=true; setStatus($('rewriteStatus'),'AI đang soạn lại nội dung...','busy');
+      const model=$('rewriteModel').value.trim()||'gemini-3.7-flash';
+      const prompt=`Bạn là biên tập viên tiếng Việt chuyên nghiệp. Hãy viết lại nội dung bên dưới theo phong cách "${style}" để khi đọc thành giọng nói nghe tự nhiên.
+Yêu cầu bắt buộc:
+- Giữ nguyên ý nghĩa, tên riêng, tên sản phẩm, con số, giá tiền, ngày tháng và thông tin quan trọng.
+- Không tự bịa dữ kiện.
+- Tối ưu câu văn cho lời nói, dễ nghe, có nhịp nghỉ hợp lý.
+- Chỉ trả về bản nội dung đã viết lại, không giải thích, không tiêu đề "Bản viết lại".
+${extra?'- Yêu cầu thêm: '+extra:''}
+
+NỘI DUNG:
+${txt}`;
+      const {res,data,keyIndex}=await geminiFetchWithFailover(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+        key=>({
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-goog-api-key':key},
+          body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.65}})
+        }),
+        'Gemini soạn lại'
+      );
+      const out=(data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').trim();
+      if(!out) throw new Error('Gemini chưa trả về nội dung văn bản.');
+      previousText=$('text').value; $('text').value=out; $('undoBtn').disabled=false; updateCount();
+      setStatus($('rewriteStatus'),`Đã soạn lại theo phong cách “${style}” bằng API 0${keyIndex+1}. Bạn có thể chỉnh tiếp trước khi tạo giọng.`, 'ok');
+    }catch(e){setStatus($('rewriteStatus'),e.message,'err')}
+    finally{$('rewriteBtn').disabled=false}
+  };
+  $('undoBtn').onclick=()=>{if(previousText){const now=$('text').value;$('text').value=previousText;previousText=now;updateCount()}};
+
+  // Mobile-friendly microphone recording -> Gemini transcription.
+  let mediaRecorder=null, mediaStream=null, audioChunks=[];
+
+  function fileToBase64(file){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=()=>resolve(String(r.result).split(',')[1]||'');
+      r.onerror=reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  async function transcribeAudioBlob(blob){
+    if(!blob || !blob.size) throw new Error('Không có dữ liệu ghi âm.');
+    setStatus($('micStatus'),'AI đang chuyển giọng nói thành văn bản...','busy');
+    const b64=await fileToBase64(blob);
+    const mime=blob.type || 'audio/webm';
+    const model=$('rewriteModel').value.trim()||'gemini-3.7-flash';
+    const {data,keyIndex}=await geminiFetchWithFailover(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      key=>({
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-goog-api-key':key},
+        body:JSON.stringify({
+          contents:[{parts:[
+            {text:'Chép chính xác lời nói tiếng Việt trong file âm thanh thành văn bản. Giữ nguyên tên riêng, tên sản phẩm, số liệu và giá tiền nếu nghe được. Chỉ trả về phần văn bản đã chép, không giải thích.'},
+            {inlineData:{mimeType:mime,data:b64}}
+          ]}],
+          generationConfig:{temperature:0.1}
+        })
+      }),
+      'Gemini chép lời'
+    );
+    const out=(data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('').trim();
+    if(!out) throw new Error('Gemini chưa trả về bản chép lời.');
+    const cur=$('text').value.trim();
+    $('text').value=(cur?cur+'\\n':'')+out;
+    updateCount();
+    setStatus($('micStatus'),`Đã chép lời bằng API 0${keyIndex+1}.`,'ok');
+  }
+
+  $('micBtn').onclick=async()=>{
+    try{
+      if(!navigator.mediaDevices?.getUserMedia){
+        throw new Error('Trình duyệt chưa cho phép truy cập micro. Nếu đang mở file HTML trực tiếp, hãy dùng bản chạy qua HTTPS hoặc dùng nút “Chọn file ghi âm”.');
+      }
+      if(!window.isSecureContext){
+        throw new Error('Micro trên mobile đang bị chặn vì trang chưa chạy trong môi trường HTTPS an toàn. Hãy mở ứng dụng qua HTTPS; hoặc ghi âm bằng điện thoại rồi dùng “Chọn file ghi âm”.');
+      }
+      mediaStream=await navigator.mediaDevices.getUserMedia({audio:{
+        echoCancellation:true,noiseSuppression:true,autoGainControl:true
+      }});
+      audioChunks=[];
+      const preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported?.(t));
+      mediaRecorder=new MediaRecorder(mediaStream,preferred?{mimeType:preferred}:undefined);
+      mediaRecorder.ondataavailable=e=>{if(e.data?.size)audioChunks.push(e.data)};
+      mediaRecorder.onstop=async()=>{
+        try{
+          const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType||'audio/webm'});
+          mediaStream?.getTracks().forEach(t=>t.stop());
+          $('micBtn').disabled=false;$('stopMicBtn').disabled=true;
+          await transcribeAudioBlob(blob);
+        }catch(e){setStatus($('micStatus'),e.message,'err')}
+      };
+      mediaRecorder.start(500);
+      $('micBtn').disabled=true;$('stopMicBtn').disabled=false;
+      setStatus($('micStatus'),'🎙️ Đang ghi âm... Bấm “Dừng & chép lời” khi nói xong.','busy');
+    }catch(e){setStatus($('micStatus'),e.message,'err')}
+  };
+  $('stopMicBtn').onclick=()=>{
+    try{
+      if(mediaRecorder?.state==='recording') mediaRecorder.stop();
+    }catch(e){setStatus($('micStatus'),e.message,'err')}
+  };
+  $('uploadAudioBtn').onclick=()=>$('audioFileInput').click();
+  $('audioFileInput').onchange=async()=>{
+    const f=$('audioFileInput').files?.[0];
+    if(!f)return;
+    try{await transcribeAudioBlob(f)}catch(e){setStatus($('micStatus'),e.message,'err')}
+    finally{$('audioFileInput').value=''}
+  };
+
+  function base64ToBytes(base64){
+    const bin=atob(base64); const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    return arr;
+  }
+  function pcm16ToWav(pcmBytes, sampleRate=24000, channels=1){
+    const header=new ArrayBuffer(44); const v=new DataView(header);
+    const write=(off,s)=>[...s].forEach((c,i)=>v.setUint8(off+i,c.charCodeAt(0)));
+    write(0,'RIFF'); v.setUint32(4,36+pcmBytes.length,true); write(8,'WAVE'); write(12,'fmt ');
+    v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,channels,true); v.setUint32(24,sampleRate,true);
+    v.setUint32(28,sampleRate*channels*2,true); v.setUint16(32,channels*2,true); v.setUint16(34,16,true);
+    write(36,'data'); v.setUint32(40,pcmBytes.length,true);
+    return new Blob([header,pcmBytes],{type:'audio/wav'});
+  }
+  function findAudioBase64(obj){
+    if(!obj||typeof obj!=='object') return null;
+    if(obj.output_audio?.data) return obj.output_audio.data;
+    if(obj.outputAudio?.data) return obj.outputAudio.data;
+    if(obj.inlineData?.data && String(obj.inlineData?.mimeType||'').startsWith('audio/')) return obj.inlineData.data;
+    if(obj.inline_data?.data && String(obj.inline_data?.mime_type||'').startsWith('audio/')) return obj.inline_data.data;
+    for(const k of Object.keys(obj)){ const found=findAudioBase64(obj[k]); if(found) return found; }
+    return null;
+  }
+
+
+  function splitTextForTTS(text,maxChars=1300){
+    const clean=text.replace(/\r/g,'').trim();
+    if(clean.length<=maxChars) return [clean];
+    const parts=clean.split(/(?<=[.!?…])\s+|\n+/).map(s=>s.trim()).filter(Boolean);
+    const chunks=[]; let cur='';
+    for(const p of parts){
+      if(!cur){cur=p;continue}
+      if((cur+' '+p).length<=maxChars){cur+=' '+p}
+      else{
+        chunks.push(cur);
+        if(p.length<=maxChars) cur=p;
+        else{
+          let rest=p;
+          while(rest.length>maxChars){
+            let cut=rest.lastIndexOf(' ',maxChars);
+            if(cut<maxChars*.6)cut=maxChars;
+            chunks.push(rest.slice(0,cut).trim());
+            rest=rest.slice(cut).trim();
+          }
+          cur=rest;
+        }
+      }
+    }
+    if(cur)chunks.push(cur);
+    return chunks;
+  }
+
+  function concatPCM(chunks,silenceMs=90,sampleRate=24000){
+    const silenceSamples=Math.floor(sampleRate*silenceMs/1000);
+    const silence=new Uint8Array(silenceSamples*2);
+    let total=chunks.reduce((s,c)=>s+c.length,0)+Math.max(0,chunks.length-1)*silence.length;
+    const out=new Uint8Array(total); let off=0;
+    chunks.forEach((c,i)=>{
+      out.set(c,off); off+=c.length;
+      if(i<chunks.length-1){out.set(silence,off);off+=silence.length}
+    });
+    return out;
+  }
+
+  async function generateTTSChunk(textChunk,voice,instruction,chunkNo,totalChunks){
+    const lockedPrompt=`Đọc chính xác nội dung tiếng Việt bên dưới bằng MỘT người nói duy nhất.
+GIỮ NHẬN DIỆN GIỌNG CỐ ĐỊNH trong toàn bộ đoạn: voice ${voice}.
+Không đổi người nói, không đổi giới tính giọng, không làm cao/thấp giọng bất thường, không chuyển sang giọng nhân vật khác.
+Giữ cùng âm sắc, độ tuổi cảm nhận, năng lượng và phong cách từ đầu đến cuối.
+${instruction}
+Phát âm rõ tên riêng, số, đơn vị và giá tiền. Không đọc phần chỉ dẫn thành tiếng.
+
+NỘI DUNG ĐOẠN ${chunkNo}/${totalChunks}:
+${textChunk}`;
+    const ttsUrl='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent';
+    const {data,keyIndex}=await geminiFetchWithFailover(
+      ttsUrl,
+      key=>({
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-goog-api-key':key},
+        body:JSON.stringify({
+          contents:[{parts:[{text:lockedPrompt}]}],
+          generationConfig:{
+            responseModalities:['AUDIO'],
+            speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voice}}}
+          }
+        })
+      }),
+      'Gemini TTS'
+    );
+    const b64=data?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData?.data)?.inlineData?.data || findAudioBase64(data);
+    if(!b64) throw new Error(`Đoạn ${chunkNo}: Gemini chưa trả về dữ liệu audio.`);
+    return {pcm:base64ToBytes(b64),keyIndex};
+  }
+
+  $('ttsBtn').onclick=async()=>{
+    const txt=$('text').value.trim();
+    if(!txt){setStatus($('ttsStatus'),'Hãy nhập nội dung cần đọc trước.','err');return}
+    try{
+      $('ttsBtn').disabled=true;
+      const voice=$('voice').value||'Kore';
+      const instruction=[
+        $('readStyle').value,
+        `Tốc độ: ${$('pace').value}.`,
+        `Cảm xúc: ${$('emotion').value}.`,
+        `Độ nhấn: ${$('emphasis').value}.`,
+        $('voiceInstruction').value.trim()
+      ].filter(Boolean).join(' ');
+
+      const mode=$('stabilityMode').value;
+      const chunkSize=parseInt($('chunkSize').value,10)||1300;
+      const useChunks=mode==='chunk' || (mode==='auto' && txt.length>1800);
+      const chunks=useChunks?splitTextForTTS(txt,chunkSize):[txt];
+
+      setStatus($('ttsStatus'),
+        chunks.length>1
+          ? `Đang tạo ${chunks.length} đoạn với cùng voice ${voice} để tăng độ ổn định...`
+          : `Gemini 3.1 TTS đang tạo giọng ${voice}...`,
+        'busy');
+
+      const pcmParts=[];
+      const usedKeys=[];
+      for(let i=0;i<chunks.length;i++){
+        setStatus($('ttsStatus'),`Đang tạo đoạn ${i+1}/${chunks.length} • Voice ${voice}...`,'busy');
+        const r=await generateTTSChunk(chunks[i],voice,instruction,i+1,chunks.length);
+        pcmParts.push(r.pcm); usedKeys.push(r.keyIndex+1);
+      }
+
+      const pcm=concatPCM(pcmParts,90,24000);
+      wavBlob=pcm16ToWav(pcm,24000,1);
+      if(objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl=URL.createObjectURL(wavBlob);
+      $('audio').src=objectUrl;$('downloadBtn').disabled=false;
+
+      const keys=[...new Set(usedKeys)].map(x=>'0'+x).join(', ');
+      setStatus($('ttsStatus'),
+        `Đã tạo ${chunks.length} đoạn và ghép WAV thành công • Voice ${voice} • API dùng: ${keys}.`,
+        'ok');
+      $('audio').play().catch(()=>{});
+    }catch(e){setStatus($('ttsStatus'),e.message,'err')}
+    finally{$('ttsBtn').disabled=false}
+  };
+
+  $('audio').addEventListener('play',()=> $('wave').classList.add('playing'));
+  $('audio').addEventListener('pause',()=> $('wave').classList.remove('playing'));
+  $('audio').addEventListener('ended',()=> $('wave').classList.remove('playing'));
+  $('downloadBtn').onclick=()=>{
+    if(!wavBlob)return;
+    const a=document.createElement('a'); a.href=objectUrl; a.download=`IDECO_AI_Voice_${new Date().toISOString().replace(/[:.]/g,'-')}.wav`; a.click();
+  };
+
+  loadLocal(); renderVoices(); updateCount();
+
+  // Try auto-sync only if a Firebase URL was already saved on this device.
+  setTimeout(async()=>{
+    if(FIREBASE_DATABASE_URL){
+      try{await firebaseRead(true)}catch(e){}
+    }
+  },400);
+})();
+</script>
+</body>
+</html>
