@@ -59,13 +59,23 @@ audio{width:100%;margin-top:10px}
 .small{font-size:12px;color:var(--muted)}
 .inline{display:flex;gap:8px;align-items:center}
 .hidden{display:none!important}
+
+.subcard{border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:14px;background:#fbfdff}
+.subcard h3{margin:0 0 8px;font-size:15px}
+.textarea-sm{min-height:96px!important}
+.voice-id{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+.voiceHint{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.45}
+details.advanced{margin-top:12px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
+.consent{background:#f6f9ff;border:1px solid #dce8fb;border-radius:10px;padding:9px 11px;font-size:12px;line-height:1.5}
+.tagline{font-size:11px;color:#526277;margin-top:6px}
 </style>
 </head>
 <body>
 <header>
   <div class="wrap brand">
     <div>
-      <span class="badge">Gemini 3.1 Flash TTS</span>
+      <span class="badge">Gemini 3.8 Flash TTS • Voice Design • Regional Voice</span>
       <h1>IDECO AI Voice Studio</h1>
       <p class="sub">Giọng nói → văn bản • AI soạn lại • Văn bản → giọng nói chuyên nghiệp</p>
     </div>
@@ -108,7 +118,7 @@ audio{width:100%;margin-top:10px}
   </section>
 
   <section class="card">
-    <h2>3. Thiết lập giọng đọc</h2>
+    <h2>3. Thiết lập giọng đọc Gemini 3.8</h2>
     <div class="row">
       <div>
         <label>Nhóm giọng</label>
@@ -119,62 +129,154 @@ audio{width:100%;margin-top:10px}
         </select>
       </div>
       <div>
-        <label>Giọng AI Studio</label>
+        <label>Giọng AI Studio / Giọng riêng</label>
         <select id="voice"></select>
       </div>
     </div>
 
-    <label>Phong cách đọc</label>
-    <select id="readStyle">
-      <option value="Đọc tự nhiên, thân thiện, rõ ràng, giống trò chuyện trực tiếp.">Tự nhiên</option>
-      <option value="Đọc chuyên nghiệp, chắc chắn, rõ chữ, phù hợp hội thảo và thuyết trình.">Hội thảo</option>
-      <option value="Đọc như người hướng dẫn đào tạo, mạch lạc, nhấn đúng trọng tâm.">Đào tạo</option>
-      <option value="Đọc phong cách podcast gần gũi, giàu nhịp điệu, có cảm xúc tự nhiên.">Podcast</option>
-      <option value="Đọc vui vẻ, hài hước vừa phải, duyên dáng, không diễn quá mức.">Hài hước</option>
-      <option value="Đọc ấm áp, truyền cảm, cảm xúc tinh tế và chân thật.">Truyền cảm</option>
-      <option value="Đọc năng lượng cao, tươi sáng, tạo động lực nhưng vẫn rõ lời.">Năng lượng</option>
-      <option value="Đọc trang trọng, điềm tĩnh, rõ ràng và có uy tín.">Trang trọng</option>
-    </select>
+    <div class="row">
+      <div>
+        <label>Chất giọng vùng miền</label>
+        <select id="region">
+          <option value="standard" selected>Tiếng Việt chuẩn / trung tính</option>
+          <option value="south">Miền Nam</option>
+          <option value="north">Miền Bắc</option>
+          <option value="hanoi">Hà Nội</option>
+          <option value="hue">Huế</option>
+          <option value="quangngai">Quảng Ngãi</option>
+          <option value="binhdinh">Bình Định</option>
+          <option value="phuyen">Phú Yên</option>
+        </select>
+      </div>
+      <div>
+        <label>Chế độ vùng miền</label>
+        <select id="regionMode">
+          <option value="locked" selected>🔒 Khóa đúng vùng miền — khuyên dùng</option>
+          <option value="style">Chỉ hướng dẫn accent — nhanh hơn</option>
+        </select>
+        <div class="small" style="margin-top:6px">Chế độ Khóa sẽ tự tạo Voice Design riêng cho vùng đã chọn ở lần dùng đầu tiên và tái sử dụng về sau.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Phong cách đọc</label>
+        <select id="readStyle">
+          <option value="natural, conversational, clear">Tự nhiên</option>
+          <option value="professional, confident, clear presentation">Hội thảo</option>
+          <option value="teacher-like, structured, clear emphasis on key ideas">Đào tạo</option>
+          <option value="intimate podcast delivery, relaxed and rhythmic">Podcast</option>
+          <option value="lightly humorous, charming, not exaggerated">Hài hước</option>
+          <option value="warm, heartfelt, emotionally nuanced">Truyền cảm</option>
+          <option value="bright, energetic, motivating, articulate">Năng lượng</option>
+          <option value="formal, composed, authoritative">Trang trọng</option>
+          <option value="soft, intimate, gentle storytelling">Kể chuyện nhẹ nhàng</option>
+        </select>
+      </div>
+    </div>
 
     <div class="row3">
       <div>
         <label>Tốc độ</label>
         <select id="pace">
-          <option>Chậm</option><option selected>Vừa phải</option><option>Nhanh</option>
+          <option value="slowly">Chậm</option><option value="at a natural medium pace" selected>Vừa phải</option><option value="briskly but clearly">Nhanh</option>
         </select>
       </div>
       <div>
         <label>Cảm xúc</label>
         <select id="emotion">
-          <option selected>Tự nhiên</option><option>Ấm áp</option><option>Hào hứng</option><option>Điềm tĩnh</option><option>Tin cậy</option>
+          <option value="natural" selected>Tự nhiên</option>
+          <option value="warm and caring">Ấm áp</option>
+          <option value="joyful and excited">Vui vẻ / Hào hứng</option>
+          <option value="calm and reassuring">Điềm tĩnh</option>
+          <option value="trustworthy and sincere">Tin cậy</option>
+          <option value="deeply emotional and touching">Xúc động</option>
+          <option value="reflective and nostalgic">Hoài niệm</option>
+          <option value="serious and focused">Nghiêm túc</option>
+          <option value="gentle and affectionate">Dịu dàng</option>
+          <option value="confident and persuasive">Tự tin / Thuyết phục</option>
         </select>
       </div>
       <div>
+        <label>Mức cảm xúc</label>
+        <select id="emotionLevel">
+          <option value="subtle">Nhẹ</option><option value="moderate" selected>Vừa</option><option value="strong but natural">Rõ</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
         <label>Độ nhấn</label>
         <select id="emphasis">
-          <option>Nhẹ</option><option selected>Vừa</option><option>Rõ</option>
+          <option value="light emphasis">Nhẹ</option><option value="balanced emphasis" selected>Vừa</option><option value="clear emphasis on important words">Rõ</option>
+        </select>
+      </div>
+      <div>
+        <label>Nhịp thở / khoảng nghỉ</label>
+        <select id="pauseStyle">
+          <option value="natural breathing and short pauses" selected>Tự nhiên</option>
+          <option value="slightly longer pauses between ideas">Nghỉ rõ giữa các ý</option>
+          <option value="tight pacing with minimal pauses">Liền mạch</option>
+          <option value="storytelling pauses, gentle breathing">Kể chuyện</option>
         </select>
       </div>
     </div>
 
     <label>Chỉ dẫn đọc riêng (không bắt buộc)</label>
-    <input id="voiceInstruction" placeholder="Ví dụ: ngắt nhẹ sau mỗi ý, đọc số tiền thật rõ...">
+    <input id="voiceInstruction" placeholder="Ví dụ: nhấn tên thuốc, đọc giá chậm và rõ, cuối câu hạ giọng tự nhiên...">
+    <div class="voiceHint"><b>Khóa vùng miền:</b> với Huế, Quảng Ngãi, Bình Định, Phú Yên, Hà Nội, Miền Bắc hoặc Miền Nam, ứng dụng có thể tự tạo một <code>voice_...</code> theo đúng vùng và lưu lại để dùng tiếp. Đây là cách ổn định hơn nhiều so với chỉ ghi vùng miền trong <code>speech_metadata.style</code>.</div>
+
+    <div class="subcard">
+      <h3>🎙️ Tạo giọng riêng — Voice Design</h3>
+      <div class="row">
+        <div><label>Tên giọng</label><input id="designName" placeholder="Ví dụ: IDECO Nam Sài Gòn 40"></div>
+        <div><label>Giới tính cảm nhận</label><select id="designGender"><option value="male">Nam</option><option value="female">Nữ</option><option value="neutral">Trung tính</option></select></div>
+      </div>
+      <label>Mô tả giọng muốn tạo</label>
+      <textarea class="textarea-sm" id="voiceDesignPrompt" placeholder="Ví dụ: Nam khoảng 40 tuổi, giọng trầm ấm, thân thiện, phát âm miền Nam tự nhiên, nói như chuyên gia tư vấn nhưng gần gũi, không lên giọng quảng cáo."></textarea>
+      <div class="toolbar">
+        <button class="btn btn-primary" id="createVoiceBtn">✨ Tạo giọng riêng</button>
+        <button class="btn btn-soft" id="useCustomVoiceBtn" disabled>✅ Dùng giọng vừa tạo</button>
+      </div>
+      <div id="voiceDesignStatus" class="status">Voice Design sẽ tạo một ID <code>voice_...</code> lưu trong Google Project; ứng dụng chỉ lưu ID giọng để dùng lại.</div>
+      <audio id="voicePreview" controls class="hidden"></audio>
+    </div>
+
+    <details class="advanced">
+      <summary>🎤 Nhân bản giọng của chính mình (Voice Replication)</summary>
+      <p class="small">Dùng khi muốn giọng tổng hợp bám theo chính giọng thật của người sở hữu. Google yêu cầu 2 file WAV của cùng một người trưởng thành: mẫu giọng 10–30 giây và file đồng ý.</p>
+      <div class="consent"><b>Câu đồng ý phải đọc nguyên văn:</b><br>“Tôi là chủ sở hữu giọng nói này và tôi đồng ý cho Google sử dụng giọng nói này để tạo mô hình giọng nói tổng hợp.”</div>
+      <div class="row">
+        <div><label>Mẫu giọng (WAV 10–30 giây)</label><input id="sourceVoiceFile" type="file" accept="audio/wav,.wav"></div>
+        <div><label>File đọc câu đồng ý (WAV)</label><input id="consentVoiceFile" type="file" accept="audio/wav,.wav"></div>
+      </div>
+      <label>Tên giọng nhân bản</label><input id="replicaName" placeholder="Ví dụ: Giọng Anh Duy Thức">
+      <div class="toolbar"><button class="btn btn-primary" id="replicateVoiceBtn">🧬 Tạo giọng nhân bản</button></div>
+      <div id="replicaStatus" class="status">Chỉ thực hiện với giọng mà người nói sở hữu và đã đọc câu đồng ý bắt buộc.</div>
+    </details>
+
+    <div class="subcard">
+      <h3>🔑 Dùng Voice ID đã tạo trong Google AI Studio</h3>
+      <div class="keyrow"><input class="voice-id" id="manualVoiceId" placeholder="voice_... hoặc voicekey_..."><button class="btn btn-soft" id="useManualVoiceBtn">Dùng ID</button></div>
+      <div class="tagline">Có thể dán Voice Design ID hoặc Voice Replication ID từ Google AI Studio.</div>
+    </div>
 
     <div class="row">
       <div>
         <label>Ổn định giọng khi nội dung dài</label>
         <select id="stabilityMode">
           <option value="auto" selected>Tự động — khuyên dùng</option>
-          <option value="single">Một lượt — nội dung ngắn</option>
+          <option value="single">Một lượt — giữ nguyên TTS 3.8</option>
           <option value="chunk">Chia đoạn & ghép WAV</option>
         </select>
       </div>
       <div>
         <label>Độ dài mỗi đoạn</label>
         <select id="chunkSize">
-          <option value="900">~900 ký tự</option>
-          <option value="1300" selected>~1.300 ký tự</option>
           <option value="1800">~1.800 ký tự</option>
+          <option value="3000" selected>~3.000 ký tự</option>
+          <option value="5000">~5.000 ký tự</option>
         </select>
       </div>
     </div>
@@ -182,7 +284,7 @@ audio{width:100%;margin-top:10px}
     <hr>
     <h2>4. Tạo giọng nói</h2>
     <button class="btn btn-primary" style="width:100%;font-size:16px;padding:14px" id="ttsBtn">🔊 Chuyển văn bản thành giọng nói</button>
-    <div id="ttsStatus" class="status">Sẵn sàng tạo âm thanh bằng <code>gemini-3.1-flash-tts-preview</code> qua GenerateContent API.</div>
+    <div id="ttsStatus" class="status">Sẵn sàng tạo âm thanh bằng <code>gemini-3.8-flash-tts</code> với style metadata, vùng miền và giọng riêng.</div>
 
     <div class="audioBox" style="margin-top:14px">
       <div id="wave" class="wave">
@@ -242,7 +344,10 @@ audio{width:100%;margin-top:10px}
       </div>
       <div>
         <label>Model Text-to-Speech</label>
-        <input id="ttsModel" value="gemini-3.1-flash-tts-preview" readonly>
+        <select id="ttsModel">
+          <option value="gemini-3.8-flash-tts" selected>gemini-3.8-flash-tts — chất lượng cao nhất</option>
+          <option value="gemini-3.8-flash-lite-tts">gemini-3.8-flash-lite-tts — nhanh / tiết kiệm</option>
+        </select>
       </div>
     </div>
 
@@ -303,6 +408,10 @@ audio{width:100%;margin-top:10px}
   let objectUrl = null;
   let runtimeKeys = ['', '', ''];
   let activeKeyIndex = 0;
+  let customVoices = [];
+  let regionalVoiceIds = {};
+  let lastCreatedVoiceId = '';
+  let previewObjectUrl = null;
 
   function setStatus(el, msg, cls='') {
     el.className = 'status' + (cls ? ' '+cls : '');
@@ -317,6 +426,10 @@ audio{width:100%;margin-top:10px}
       $('firebaseUrl').value = c.firebaseUrl || FIREBASE_DATABASE_URL;
       $('firebasePath').value = c.firebasePath || 'ideco_ai_voice_studio/settings';
       $('rewriteModel').value = c.rewriteModel || 'gemini-3.7-flash';
+      if($('ttsModel')) $('ttsModel').value = c.ttsModel || 'gemini-3.8-flash-tts';
+      customVoices = Array.isArray(c.customVoices) ? c.customVoices : [];
+      regionalVoiceIds = (c.regionalVoiceIds && typeof c.regionalVoiceIds==='object') ? c.regionalVoiceIds : {};
+      if($('regionMode')) $('regionMode').value = c.regionMode || 'locked';
       runtimeKeys = [
         c.geminiKeys?.[0] || c.geminiKey || '',
         c.geminiKeys?.[1] || '',
@@ -326,6 +439,7 @@ audio{width:100%;margin-top:10px}
       $('geminiKey2').value = runtimeKeys[1];
       $('geminiKey3').value = runtimeKeys[2];
       updateKeyInfo();
+      if($('voice')) renderVoices();
     }catch(e){}
   }
   function saveLocal(){
@@ -338,7 +452,11 @@ audio{width:100%;margin-top:10px}
       geminiKeys:keys,
       firebaseUrl:FIREBASE_DATABASE_URL,
       firebasePath:escPath($('firebasePath').value),
-      rewriteModel:$('rewriteModel').value.trim() || 'gemini-3.7-flash'
+      rewriteModel:$('rewriteModel').value.trim() || 'gemini-3.7-flash',
+      ttsModel:$('ttsModel')?.value || 'gemini-3.8-flash-tts',
+      customVoices,
+      regionalVoiceIds,
+      regionMode:$('regionMode')?.value || 'locked'
     };
     localStorage.setItem(LOCAL_KEY,JSON.stringify(c));
     runtimeKeys = keys;
@@ -371,12 +489,21 @@ audio{width:100%;margin-top:10px}
       $('geminiKey3').value=runtimeKeys[2];
     }
     if(data.rewriteModel) $('rewriteModel').value=data.rewriteModel;
+    if(data.ttsModel && $('ttsModel')) $('ttsModel').value=data.ttsModel;
+    if(Array.isArray(data.customVoices)) customVoices=data.customVoices;
+    if(data.regionalVoiceIds && typeof data.regionalVoiceIds==='object') regionalVoiceIds=data.regionalVoiceIds;
+    if(data.regionMode && $('regionMode')) $('regionMode').value=data.regionMode;
     localStorage.setItem(LOCAL_KEY,JSON.stringify({
       geminiKeys:runtimeKeys,
       firebaseUrl:url,
       firebasePath:path,
-      rewriteModel:$('rewriteModel').value.trim()||'gemini-3.7-flash'
+      rewriteModel:$('rewriteModel').value.trim()||'gemini-3.7-flash',
+      ttsModel:$('ttsModel')?.value||'gemini-3.8-flash-tts',
+      customVoices,
+      regionalVoiceIds,
+      regionMode:$('regionMode')?.value || 'locked'
     }));
+    renderVoices();
     updateKeyInfo();
     if(!silent) setStatus($('settingsStatus'),'Đã đọc cấu hình Gemini từ Firebase thành công.','ok');
     return data;
@@ -389,7 +516,10 @@ audio{width:100%;margin-top:10px}
     const payload={
       geminiKeys:c.geminiKeys,
       rewriteModel:c.rewriteModel,
-      ttsModel:'gemini-3.1-flash-tts-preview',
+      ttsModel:c.ttsModel || 'gemini-3.8-flash-tts',
+      customVoices,
+      regionalVoiceIds,
+      regionMode:$('regionMode')?.value || 'locked',
       updatedAt:new Date().toISOString()
     };
     const res=await fetch(`${c.firebaseUrl}/${c.firebasePath}.json`,{
@@ -456,12 +586,137 @@ audio{width:100%;margin-top:10px}
     const filter=$('gender').value;
     const selected=$('voice').value;
     $('voice').innerHTML='';
+
+    const pre=document.createElement('optgroup');
+    pre.label='Giọng dựng sẵn Google';
     voices.filter(v=>filter==='all'||v[2]===filter).forEach(v=>{
-      const o=document.createElement('option'); o.value=v[0]; o.textContent=`${v[0]} — ${v[1]}`; $('voice').appendChild(o);
+      const o=document.createElement('option'); o.value=v[0]; o.textContent=`${v[0]} — ${v[1]}`; pre.appendChild(o);
     });
+    $('voice').appendChild(pre);
+
+    if(customVoices.length){
+      const custom=document.createElement('optgroup'); custom.label='Giọng riêng / nhân bản';
+      customVoices.forEach(v=>{
+        const o=document.createElement('option');
+        o.value=v.id;
+        o.textContent=`${v.name || 'Giọng riêng'} — ${v.type==='replicated'?'Nhân bản':'Voice Design'}`;
+        custom.appendChild(o);
+      });
+      $('voice').appendChild(custom);
+    }
+
     if([...$('voice').options].some(o=>o.value===selected)) $('voice').value=selected;
-    else if(filter==='female') $('voice').value='Kore';
-    else if(filter==='male') $('voice').value='Puck';
+    else if(filter==='female' && [...$('voice').options].some(o=>o.value==='Kore')) $('voice').value='Kore';
+    else if(filter==='male' && [...$('voice').options].some(o=>o.value==='Puck')) $('voice').value='Puck';
+  }
+
+  function rememberCustomVoice(id,name,type='prompted'){
+    if(!id) return;
+    const idx=customVoices.findIndex(v=>v.id===id);
+    const item={id,name:name||id,type};
+    if(idx>=0) customVoices[idx]={...customVoices[idx],...item}; else customVoices.unshift(item);
+    renderVoices();
+    try{ saveLocal(); }catch(e){}
+  }
+
+  const REGION_STYLE={
+    standard:'standard, neutral Vietnamese pronunciation',
+    south:'authentic Southern Vietnamese accent, natural everyday Southern cadence; do not drift into Northern or Central Vietnamese pronunciation',
+    north:'authentic Northern Vietnamese accent with clear Northern consonants and natural Northern cadence; do not drift into Southern Vietnamese pronunciation',
+    hanoi:'authentic native Hà Nội Vietnamese accent, educated everyday Hanoi speech, elegant and conversational; do not sound Southern/Saigon or Central Vietnamese',
+    hue:'authentic native Huế Vietnamese accent from Central Vietnam, clearly recognizable Huế regional identity and melodic cadence; do not sound Southern/Saigon or Northern/Hà Nội',
+    quangngai:'authentic native Quảng Ngãi Vietnamese accent, clearly recognizable Central Vietnamese regional identity; do not drift into Southern/Saigon or Northern/Hà Nội',
+    binhdinh:'authentic native Bình Định Vietnamese accent, clearly recognizable South-Central Vietnamese regional identity and cadence; do not drift into Saigon/Southern or Northern/Hà Nội',
+    phuyen:'authentic native Phú Yên Vietnamese accent, clearly recognizable South-Central Vietnamese regional identity and cadence; do not drift into Saigon/Southern or Northern/Hà Nội'
+  };
+
+  const REGION_DESIGN={
+    south:'A native Vietnamese speaker born and raised in Southern Vietnam. The base vocal identity must have a clearly recognizable, natural Southern Vietnamese accent and everyday Southern cadence. Keep the regional pronunciation consistent in every sentence. Do not drift toward Hà Nội/Northern Vietnamese or Central Vietnamese. Sound like a real local adult in normal conversation, not a parody or exaggerated imitation.',
+    north:'A native Vietnamese speaker born and raised in Northern Vietnam. The base vocal identity must have a clearly recognizable, natural Northern Vietnamese accent. Keep Northern pronunciation and cadence consistent in every sentence. Do not drift toward Saigon/Southern Vietnamese or Central Vietnamese. Natural educated everyday speech, never caricatured.',
+    hanoi:'A native Vietnamese speaker born and raised in Hà Nội. The base vocal identity must be unmistakably Hà Nội Vietnamese: natural educated everyday Hanoi pronunciation, rhythm and intonation. Do not sound Saigon/Southern and do not sound Central Vietnamese. Maintain the Hanoi regional identity throughout long passages without accent drift. Natural human speech, not theatrical.',
+    hue:'A native Vietnamese speaker born and raised in Huế, Central Vietnam. The BASE vocal identity must be unmistakably Huế Vietnamese, with authentic everyday Huế pronunciation, melodic Central Vietnamese cadence, vowel/consonant coloration and local rhythm maintained consistently in every sentence. IMPORTANT: do NOT sound Saigon/Southern Vietnamese and do NOT sound Hà Nội/Northern Vietnamese. The Huế identity must remain clearly audible even in formal narration. Sound like a real educated adult from Huế, understandable nationally, never parody or exaggerated imitation.',
+    quangngai:'A native Vietnamese speaker born and raised in Quảng Ngãi, Central Vietnam. The BASE vocal identity must be clearly and consistently Quảng Ngãi Vietnamese, with authentic local cadence and regional pronunciation. IMPORTANT: do NOT drift into Saigon/Southern Vietnamese or Hà Nội/Northern Vietnamese. Natural educated local speech, understandable nationally, not a caricature.',
+    binhdinh:'A native Vietnamese speaker born and raised in Bình Định, South-Central Vietnam. The BASE vocal identity must be clearly and consistently Bình Định Vietnamese, with authentic local cadence and regional pronunciation. IMPORTANT: do NOT drift into Saigon/Southern Vietnamese or Hà Nội/Northern Vietnamese. Natural educated local speech, understandable nationally, not a caricature.',
+    phuyen:'A native Vietnamese speaker born and raised in Phú Yên, South-Central Vietnam. The BASE vocal identity must be clearly and consistently Phú Yên Vietnamese, with authentic local cadence and regional pronunciation. IMPORTANT: do NOT drift into Saigon/Southern Vietnamese or Hà Nội/Northern Vietnamese. Natural educated local speech, understandable nationally, not a caricature.'
+  };
+
+  const REGION_LABEL={standard:'Tiếng Việt chuẩn',south:'Miền Nam',north:'Miền Bắc',hanoi:'Hà Nội',hue:'Huế',quangngai:'Quảng Ngãi',binhdinh:'Bình Định',phuyen:'Phú Yên'};
+
+  function isCustomVoice(v){ return /^voice(key)?_/i.test(v||''); }
+
+  function inferVoiceGender(voice){
+    const found=voices.find(v=>v[0]===voice);
+    if(found) return found[2];
+    const selected=$('gender')?.value;
+    if(selected==='male'||selected==='female') return selected;
+    return $('designGender')?.value || 'neutral';
+  }
+
+  function regionalVoiceKey(region,gender){
+    return `${region}__${gender||'neutral'}__v2`;
+  }
+
+  async function createRegionalVoice(region,gender,baseVoice){
+    const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+    const regional=REGION_DESIGN[region];
+    if(!regional) return baseVoice;
+    const voiceTrait=voices.find(v=>v[0]===baseVoice)?.[1] || 'natural, warm and conversational';
+    const displayName=`IDECO ${REGION_LABEL[region]} ${gender==='male'?'Nam':gender==='female'?'Nữ':'Trung tính'} v2`;
+    const prompt=[
+      gender==='male'?'Adult male Vietnamese voice':gender==='female'?'Adult female Vietnamese voice':'Adult gender-neutral Vietnamese voice',
+      regional,
+      `Vocal character: ${voiceTrait}. Human-like studio fidelity, natural breathing, conversational realism, expressive but never overacted.`
+    ].join('. ');
+    const {data,keyIndex}=await geminiFetchWithFailover(
+      'https://generativelanguage.googleapis.com/v1beta/voices',
+      key=>({
+        method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
+        body:JSON.stringify({store:true,voice:{model,type:'prompted',display_name:displayName,gender,language_code:'vi-VN',prompted:{input:prompt}}})
+      }),
+      `Voice Design ${REGION_LABEL[region]}`
+    );
+    const id=data?.id || data?.voice?.id;
+    if(!id) throw new Error(`Google chưa trả về Voice ID cho giọng ${REGION_LABEL[region]}.`);
+    rememberCustomVoice(id,displayName,'prompted');
+    const sample=data?.sample_audio?.data || data?.sampleAudio?.data;
+    const mime=data?.sample_audio?.mime_type || data?.sampleAudio?.mimeType || 'audio/wav';
+    if(sample) setVoicePreviewFromBase64(sample,mime);
+    regionalVoiceIds[regionalVoiceKey(region,gender)]={id,name:displayName,region,gender,createdAt:new Date().toISOString()};
+    try{ saveLocal(); await firebaseWrite(); }catch(e){}
+    return {id,keyIndex};
+  }
+
+  async function resolveVoiceForRegion(baseVoice){
+    const region=$('region')?.value || 'standard';
+    const mode=$('regionMode')?.value || 'locked';
+    if(region==='standard' || mode!=='locked') return {voice:baseVoice,autoRegional:false};
+    const gender=inferVoiceGender(baseVoice);
+    const key=regionalVoiceKey(region,gender);
+    const cached=regionalVoiceIds[key];
+    if(cached?.id){
+      rememberCustomVoice(cached.id,cached.name||`IDECO ${REGION_LABEL[region]}`,'prompted');
+      return {voice:cached.id,autoRegional:true,cached:true,gender};
+    }
+    setStatus($('ttsStatus'),`Lần đầu dùng ${REGION_LABEL[region]}: đang tạo và khóa một Voice Design ${gender==='male'?'Nam':gender==='female'?'Nữ':'Trung tính'} riêng cho vùng này...`,'busy');
+    const created=await createRegionalVoice(region,gender,baseVoice);
+    return {voice:created.id,autoRegional:true,cached:false,gender};
+  }
+
+  function buildSpeechStyle(voice){
+    const bits=[
+      $('readStyle').value,
+      `emotion: ${$('emotion').value}, ${$('emotionLevel').value}`,
+      `pace: ${$('pace').value}`,
+      $('emphasis').value,
+      $('pauseStyle').value
+    ];
+    // Regional accent is an immutable trait ideally carried by a designed/replicated voice.
+    // For prebuilt voices we still pass a concise regional delivery target for immediate use.
+    if(!isCustomVoice(voice) && $('region').value!=='standard') bits.push(REGION_STYLE[$('region').value]);
+    if(isCustomVoice(voice) && $('regionMode')?.value==='locked') bits.push('preserve the designed regional accent consistently; never drift to another Vietnamese region');
+    const extra=$('voiceInstruction').value.trim();
+    if(extra) bits.push(extra);
+    return bits.filter(Boolean).join('; ');
   }
 
   function updateCount(){ $('charCount').textContent=$('text').value.length.toLocaleString('vi-VN'); }
@@ -528,6 +783,96 @@ audio{width:100%;margin-top:10px}
   $('text').addEventListener('input',updateCount);
   $('clearBtn').onclick=()=>{$('text').value='';updateCount()};
   $('gender').onchange=renderVoices;
+  if($('regionMode')) $('regionMode').addEventListener('change',()=>{try{saveLocal()}catch(e){}});
+
+
+  function setVoicePreviewFromBase64(b64,mime='audio/wav'){
+    if(!b64) return;
+    const bytes=base64ToBytes(b64);
+    if(previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+    previewObjectUrl=URL.createObjectURL(new Blob([bytes],{type:mime||'audio/wav'}));
+    $('voicePreview').src=previewObjectUrl;
+    $('voicePreview').classList.remove('hidden');
+  }
+
+  $('createVoiceBtn').onclick=async()=>{
+    const name=$('designName').value.trim() || `IDECO ${REGION_LABEL[$('region').value] || 'Voice'}`;
+    const free=$('voiceDesignPrompt').value.trim();
+    const gender=$('designGender').value;
+    const regional=REGION_STYLE[$('region').value] || REGION_STYLE.standard;
+    const prompt=[
+      `${gender==='male'?'Male':gender==='female'?'Female':'Gender-neutral'} Vietnamese adult voice`,
+      regional,
+      free || 'natural human-like timbre, warm, conversational, clean studio sound, expressive but not exaggerated'
+    ].join('. ');
+    try{
+      $('createVoiceBtn').disabled=true;
+      setStatus($('voiceDesignStatus'),'Đang tạo Voice Design mới bằng Gemini 3.8...','busy');
+      const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+      const {data,keyIndex}=await geminiFetchWithFailover(
+        'https://generativelanguage.googleapis.com/v1beta/voices',
+        key=>({
+          method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key},
+          body:JSON.stringify({store:true,voice:{model,type:'prompted',display_name:name,gender,language_code:'vi-VN',prompted:{input:prompt}}})
+        }), 'Gemini Voice Design'
+      );
+      const id=data?.id || data?.voice?.id;
+      if(!id) throw new Error('Google chưa trả về Voice ID.');
+      lastCreatedVoiceId=id;
+      rememberCustomVoice(id,name,'prompted');
+      $('voice').value=id;
+      $('useCustomVoiceBtn').disabled=false;
+      const sample=data?.sample_audio?.data || data?.sampleAudio?.data;
+      const mime=data?.sample_audio?.mime_type || data?.sampleAudio?.mimeType || 'audio/wav';
+      if(sample) setVoicePreviewFromBase64(sample,mime);
+      setStatus($('voiceDesignStatus'),`Đã tạo “${name}” • ${id} • API 0${keyIndex+1}. Giọng đã được chọn để sử dụng.`, 'ok');
+      try{await firebaseWrite()}catch(e){}
+    }catch(e){setStatus($('voiceDesignStatus'),e.message,'err')}
+    finally{$('createVoiceBtn').disabled=false}
+  };
+
+  $('useCustomVoiceBtn').onclick=()=>{
+    if(!lastCreatedVoiceId) return;
+    renderVoices(); $('voice').value=lastCreatedVoiceId;
+    setStatus($('voiceDesignStatus'),`Đang dùng giọng riêng ${lastCreatedVoiceId}.`,'ok');
+  };
+
+  $('useManualVoiceBtn').onclick=()=>{
+    const id=$('manualVoiceId').value.trim();
+    if(!/^voice(key)?_/i.test(id)){setStatus($('voiceDesignStatus'),'Voice ID phải bắt đầu bằng voice_ hoặc voicekey_.','err');return}
+    rememberCustomVoice(id,'Voice ID nhập tay',id.startsWith('voicekey_')?'replicated':'prompted');
+    $('voice').value=id;
+    setStatus($('voiceDesignStatus'),`Đã chọn ${id}.`,'ok');
+  };
+
+  $('replicateVoiceBtn').onclick=async()=>{
+    const source=$('sourceVoiceFile').files?.[0];
+    const consent=$('consentVoiceFile').files?.[0];
+    const name=$('replicaName').value.trim() || 'IDECO Replicated Voice';
+    if(!source||!consent){setStatus($('replicaStatus'),'Hãy chọn đủ 2 file WAV: mẫu giọng và file đọc câu đồng ý.','err');return}
+    try{
+      $('replicateVoiceBtn').disabled=true;
+      setStatus($('replicaStatus'),'Đang xác minh và tạo giọng nhân bản...','busy');
+      const sourceB64=await fileToBase64(source), consentB64=await fileToBase64(consent);
+      const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+      const {data,keyIndex}=await geminiFetchWithFailover(
+        'https://generativelanguage.googleapis.com/v1beta/voices',
+        key=>({
+          method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key},
+          body:JSON.stringify({store:true,voice:{model,type:'replicated',display_name:name,replicated:{source_audio:{mime_type:source.type||'audio/wav',data:sourceB64},consent_audio:{mime_type:consent.type||'audio/wav',data:consentB64}}}})
+        }), 'Gemini Voice Replication'
+      );
+      const id=data?.id || data?.voice?.id;
+      if(!id) throw new Error('Google chưa trả về Voice ID sau khi nhân bản.');
+      lastCreatedVoiceId=id;
+      rememberCustomVoice(id,name,'replicated');
+      $('voice').value=id;
+      $('useCustomVoiceBtn').disabled=false;
+      setStatus($('replicaStatus'),`Đã tạo giọng nhân bản “${name}” • ${id} • API 0${keyIndex+1}.`, 'ok');
+      try{await firebaseWrite()}catch(e){}
+    }catch(e){setStatus($('replicaStatus'),e.message,'err')}
+    finally{$('replicateVoiceBtn').disabled=false}
+  };
 
   document.querySelectorAll('#rewriteStyles .pill').forEach(p=>p.onclick=()=>{
     document.querySelectorAll('#rewriteStyles .pill').forEach(x=>x.classList.remove('active'));
@@ -657,6 +1002,7 @@ ${txt}`;
     for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
     return arr;
   }
+
   function pcm16ToWav(pcmBytes, sampleRate=24000, channels=1){
     const header=new ArrayBuffer(44); const v=new DataView(header);
     const write=(off,s)=>[...s].forEach((c,i)=>v.setUint8(off+i,c.charCodeAt(0)));
@@ -666,18 +1012,34 @@ ${txt}`;
     write(36,'data'); v.setUint32(40,pcmBytes.length,true);
     return new Blob([header,pcmBytes],{type:'audio/wav'});
   }
-  function findAudioBase64(obj){
+
+  function findAudioPayload(obj){
     if(!obj||typeof obj!=='object') return null;
-    if(obj.output_audio?.data) return obj.output_audio.data;
-    if(obj.outputAudio?.data) return obj.outputAudio.data;
-    if(obj.inlineData?.data && String(obj.inlineData?.mimeType||'').startsWith('audio/')) return obj.inlineData.data;
-    if(obj.inline_data?.data && String(obj.inline_data?.mime_type||'').startsWith('audio/')) return obj.inline_data.data;
-    for(const k of Object.keys(obj)){ const found=findAudioBase64(obj[k]); if(found) return found; }
+    if(obj.output_audio?.data) return {data:obj.output_audio.data,mimeType:obj.output_audio.mime_type||obj.output_audio.mimeType||'audio/wav'};
+    if(obj.outputAudio?.data) return {data:obj.outputAudio.data,mimeType:obj.outputAudio.mimeType||'audio/wav'};
+    if(obj.inlineData?.data && String(obj.inlineData?.mimeType||'').startsWith('audio/')) return {data:obj.inlineData.data,mimeType:obj.inlineData.mimeType};
+    if(obj.inline_data?.data && String(obj.inline_data?.mime_type||'').startsWith('audio/')) return {data:obj.inline_data.data,mimeType:obj.inline_data.mime_type};
+    for(const k of Object.keys(obj)){ const found=findAudioPayload(obj[k]); if(found) return found; }
     return null;
   }
 
+  function parseWavPCM(bytes){
+    if(bytes.length<44) return null;
+    const text=(o,n)=>String.fromCharCode(...bytes.slice(o,o+n));
+    if(text(0,4)!=='RIFF'||text(8,4)!=='WAVE') return null;
+    const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+    let off=12, sampleRate=24000, channels=1, bits=16, data=null;
+    while(off+8<=bytes.length){
+      const id=text(off,4), size=dv.getUint32(off+4,true), p=off+8;
+      if(id==='fmt ' && size>=16){channels=dv.getUint16(p+2,true);sampleRate=dv.getUint32(p+4,true);bits=dv.getUint16(p+14,true)}
+      if(id==='data'){data=bytes.slice(p,Math.min(p+size,bytes.length));break}
+      off=p+size+(size%2);
+    }
+    if(!data||bits!==16) return null;
+    return {pcm:data,sampleRate,channels};
+  }
 
-  function splitTextForTTS(text,maxChars=1300){
+  function splitTextForTTS(text,maxChars=3000){
     const clean=text.replace(/\r/g,'').trim();
     if(clean.length<=maxChars) return [clean];
     const parts=clean.split(/(?<=[.!?…])\s+|\n+/).map(s=>s.trim()).filter(Boolean);
@@ -693,8 +1055,7 @@ ${txt}`;
           while(rest.length>maxChars){
             let cut=rest.lastIndexOf(' ',maxChars);
             if(cut<maxChars*.6)cut=maxChars;
-            chunks.push(rest.slice(0,cut).trim());
-            rest=rest.slice(cut).trim();
+            chunks.push(rest.slice(0,cut).trim()); rest=rest.slice(cut).trim();
           }
           cur=rest;
         }
@@ -704,47 +1065,39 @@ ${txt}`;
     return chunks;
   }
 
-  function concatPCM(chunks,silenceMs=90,sampleRate=24000){
+  function concatPCM(chunks,silenceMs=90,sampleRate=24000,channels=1){
     const silenceSamples=Math.floor(sampleRate*silenceMs/1000);
-    const silence=new Uint8Array(silenceSamples*2);
-    let total=chunks.reduce((s,c)=>s+c.length,0)+Math.max(0,chunks.length-1)*silence.length;
+    const silence=new Uint8Array(silenceSamples*2*channels);
+    const total=chunks.reduce((s,c)=>s+c.length,0)+Math.max(0,chunks.length-1)*silence.length;
     const out=new Uint8Array(total); let off=0;
-    chunks.forEach((c,i)=>{
-      out.set(c,off); off+=c.length;
-      if(i<chunks.length-1){out.set(silence,off);off+=silence.length}
-    });
+    chunks.forEach((c,i)=>{out.set(c,off);off+=c.length;if(i<chunks.length-1){out.set(silence,off);off+=silence.length}});
     return out;
   }
 
-  async function generateTTSChunk(textChunk,voice,instruction,chunkNo,totalChunks){
-    const lockedPrompt=`Đọc chính xác nội dung tiếng Việt bên dưới bằng MỘT người nói duy nhất.
-GIỮ NHẬN DIỆN GIỌNG CỐ ĐỊNH trong toàn bộ đoạn: voice ${voice}.
-Không đổi người nói, không đổi giới tính giọng, không làm cao/thấp giọng bất thường, không chuyển sang giọng nhân vật khác.
-Giữ cùng âm sắc, độ tuổi cảm nhận, năng lượng và phong cách từ đầu đến cuối.
-${instruction}
-Phát âm rõ tên riêng, số, đơn vị và giá tiền. Không đọc phần chỉ dẫn thành tiếng.
-
-NỘI DUNG ĐOẠN ${chunkNo}/${totalChunks}:
-${textChunk}`;
-    const ttsUrl='https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent';
+  async function generateTTSChunk(textChunk,voice,style,chunkNo,totalChunks){
+    const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+    const ttsUrl=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const {data,keyIndex}=await geminiFetchWithFailover(
       ttsUrl,
       key=>({
         method:'POST',
         headers:{'Content-Type':'application/json','x-goog-api-key':key},
         body:JSON.stringify({
-          contents:[{parts:[{text:lockedPrompt}]}],
+          contents:[{role:'user',parts:[{
+            text:textChunk,
+            speech_metadata:{style:style||''}
+          }]}],
           generationConfig:{
             responseModalities:['AUDIO'],
-            speechConfig:{voiceConfig:{prebuiltVoiceConfig:{voiceName:voice}}}
+            speechConfig:{voiceConfig:{voice}}
           }
         })
       }),
-      'Gemini TTS'
+      'Gemini 3.8 TTS'
     );
-    const b64=data?.candidates?.[0]?.content?.parts?.find(p=>p.inlineData?.data)?.inlineData?.data || findAudioBase64(data);
-    if(!b64) throw new Error(`Đoạn ${chunkNo}: Gemini chưa trả về dữ liệu audio.`);
-    return {pcm:base64ToBytes(b64),keyIndex};
+    const payload=findAudioPayload(data);
+    if(!payload?.data) throw new Error(`Đoạn ${chunkNo}: Gemini chưa trả về dữ liệu audio.`);
+    return {bytes:base64ToBytes(payload.data),mimeType:payload.mimeType||'audio/wav',keyIndex};
   }
 
   $('ttsBtn').onclick=async()=>{
@@ -752,44 +1105,49 @@ ${textChunk}`;
     if(!txt){setStatus($('ttsStatus'),'Hãy nhập nội dung cần đọc trước.','err');return}
     try{
       $('ttsBtn').disabled=true;
-      const voice=$('voice').value||'Kore';
-      const instruction=[
-        $('readStyle').value,
-        `Tốc độ: ${$('pace').value}.`,
-        `Cảm xúc: ${$('emotion').value}.`,
-        `Độ nhấn: ${$('emphasis').value}.`,
-        $('voiceInstruction').value.trim()
-      ].filter(Boolean).join(' ');
-
+      const requestedVoice=$('voice').value||'Kore';
+      const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+      const resolved=await resolveVoiceForRegion(requestedVoice);
+      const voice=resolved.voice;
+      const style=buildSpeechStyle(voice);
       const mode=$('stabilityMode').value;
-      const chunkSize=parseInt($('chunkSize').value,10)||1300;
-      const useChunks=mode==='chunk' || (mode==='auto' && txt.length>1800);
+      const chunkSize=parseInt($('chunkSize').value,10)||3000;
+      const useChunks=mode==='chunk' || (mode==='auto' && txt.length>6000);
       const chunks=useChunks?splitTextForTTS(txt,chunkSize):[txt];
 
-      setStatus($('ttsStatus'),
-        chunks.length>1
-          ? `Đang tạo ${chunks.length} đoạn với cùng voice ${voice} để tăng độ ổn định...`
-          : `Gemini 3.1 TTS đang tạo giọng ${voice}...`,
-        'busy');
+      setStatus($('ttsStatus'),`${model} đang tạo ${chunks.length>1?chunks.length+' đoạn':'giọng'} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice vùng đã khóa':'Voice'} ${voice}...`,'busy');
 
-      const pcmParts=[];
-      const usedKeys=[];
+      const results=[]; const usedKeys=[];
       for(let i=0;i<chunks.length;i++){
-        setStatus($('ttsStatus'),`Đang tạo đoạn ${i+1}/${chunks.length} • Voice ${voice}...`,'busy');
-        const r=await generateTTSChunk(chunks[i],voice,instruction,i+1,chunks.length);
-        pcmParts.push(r.pcm); usedKeys.push(r.keyIndex+1);
+        setStatus($('ttsStatus'),`Đang tạo đoạn ${i+1}/${chunks.length} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice vùng':'Voice'} ${voice}...`,'busy');
+        const r=await generateTTSChunk(chunks[i],voice,style,i+1,chunks.length);
+        results.push(r); usedKeys.push(r.keyIndex+1);
       }
 
-      const pcm=concatPCM(pcmParts,90,24000);
-      wavBlob=pcm16ToWav(pcm,24000,1);
+      if(results.length===1){
+        const r=results[0];
+        const parsed=parseWavPCM(r.bytes);
+        if(parsed) wavBlob=new Blob([r.bytes],{type:'audio/wav'});
+        else if(/l16|pcm/i.test(r.mimeType)) wavBlob=pcm16ToWav(r.bytes,24000,1);
+        else wavBlob=new Blob([r.bytes],{type:r.mimeType||'audio/wav'});
+      }else{
+        const parsed=results.map(r=>parseWavPCM(r.bytes));
+        if(parsed.every(Boolean)){
+          const sr=parsed[0].sampleRate, ch=parsed[0].channels;
+          if(!parsed.every(x=>x.sampleRate===sr&&x.channels===ch)) throw new Error('Các đoạn audio có sample rate/channel khác nhau, chưa thể ghép an toàn.');
+          wavBlob=pcm16ToWav(concatPCM(parsed.map(x=>x.pcm),90,sr,ch),sr,ch);
+        }else if(results.every(r=>/l16|pcm/i.test(r.mimeType))){
+          wavBlob=pcm16ToWav(concatPCM(results.map(r=>r.bytes),90,24000,1),24000,1);
+        }else{
+          throw new Error('Gemini trả audio nén theo từng đoạn nên chưa thể ghép trực tiếp. Hãy chọn “Một lượt” hoặc giảm nội dung.');
+        }
+      }
+
       if(objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl=URL.createObjectURL(wavBlob);
       $('audio').src=objectUrl;$('downloadBtn').disabled=false;
-
       const keys=[...new Set(usedKeys)].map(x=>'0'+x).join(', ');
-      setStatus($('ttsStatus'),
-        `Đã tạo ${chunks.length} đoạn và ghép WAV thành công • Voice ${voice} • API dùng: ${keys}.`,
-        'ok');
+      setStatus($('ttsStatus'),`Đã tạo thành công • ${model} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Đã khóa Voice vùng miền':'Voice'} ${voice} • API: ${keys}.`, 'ok');
       $('audio').play().catch(()=>{});
     }catch(e){setStatus($('ttsStatus'),e.message,'err')}
     finally{$('ttsBtn').disabled=false}
