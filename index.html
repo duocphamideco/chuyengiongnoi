@@ -283,6 +283,10 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
 
     <hr>
     <h2>4. Tạo giọng nói</h2>
+    <div class="subcard" style="margin:0 0 12px;background:#f0faf6;border-color:#a9ddce">
+      <label class="inline" style="font-size:14px;margin:0"><input type="checkbox" id="strictVoiceLock" checked style="width:auto;accent-color:#087252"> 🔒 Khóa cố định giọng đọc & vùng miền xuyên suốt văn bản dài</label>
+      <div class="voiceHint">Dùng cùng một Voice ID và chỉ dẫn giọng ở mọi đoạn. Không ghép lẫn Google và Kie trong cùng một bài. Khi chuyển nguồn dự phòng, ứng dụng phải tạo lại toàn bộ các đoạn để tránh ghép hai giọng khác nhau. Khóa này giúp giảm đổi giọng nhưng không bảo đảm tuyệt đối chất giọng vùng miền của mô hình.</div>
+    </div>
     <div class="subcard" style="margin-bottom:12px;background:#f5f9ff">
        <div class="inline" style="justify-content:space-between;flex-wrap:wrap"><b>🔀 Nguồn tạo giọng đọc</b><button class="btn btn-soft" id="kieToggle" type="button" aria-pressed="false">🟢 Google chính · Bật Kie dự phòng</button></div>
        <label class="inline" style="font-weight:600"><input id="kieAutoFallback" type="checkbox" style="width:auto" checked> Tự chuyển sang Kie khi cả 3 khóa Google hết quota hoặc lỗi kết nối</label>
@@ -453,6 +457,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
       $('kieModel').value=KIE_MODEL;
       $('kieAutoFallback').checked=localStorage.getItem('ideco_kie_auto_v1')!=='false';
       renderKieMode();
+      $('strictVoiceLock').checked=localStorage.getItem('ideco_strict_voice_lock_v1')!=='false';
       $('firebaseUrl').value = c.firebaseUrl || FIREBASE_DATABASE_URL;
       $('firebasePath').value = c.firebasePath || 'ideco_ai_voice_studio/settings';
       $('rewriteModel').value = c.rewriteModel || 'gemini-3.7-flash';
@@ -475,6 +480,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   function saveLocal(){
     localStorage.setItem(KIE_KEY_STORAGE,$('kieApiKey').value.trim());
     localStorage.setItem('ideco_kie_auto_v1',String($('kieAutoFallback').checked));
+    localStorage.setItem('ideco_strict_voice_lock_v1',String($('strictVoiceLock').checked));
     const keys=[
       $('geminiKey1').value.trim(),
       $('geminiKey2').value.trim(),
@@ -1117,6 +1123,18 @@ ${txt}`;
     return out;
   }
 
+  function lockedStyle(style,voice){
+    const region=$('region').value;
+    if(!$('strictVoiceLock').checked) return style;
+    const target=REGION_STYLE[region]||REGION_STYLE.standard;
+    return [
+      `VOICE IDENTITY LOCK. Speak the whole recording using the SAME single speaker, same age, gender, pitch, timbre, voice identity and speaking cadence. Voice name: ${voice}.`,
+      `REGIONAL ACCENT LOCK: ${target}. Keep this exact accent in EVERY sentence. Do not change to another Vietnamese dialect at paragraph boundaries.`,
+      'Avoid voice switching, style drift, pitch resets and abrupt changes across sections. Do not imitate additional speakers. Natural sustained narration.',
+      style
+    ].join(' ');
+  }
+
   async function generateTTSChunk(textChunk,voice,style,chunkNo,totalChunks){
     const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
     const ttsUrl=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -1197,7 +1215,7 @@ ${txt}`;
       let usingKie=kieManual;
       let resolved=usingKie?{voice:requestedVoice,autoRegional:false}:await resolveVoiceForRegion(requestedVoice).catch(e=>{if($('kieAutoFallback').checked&&currentKieKey()&&googleFallbackEligible(e)){usingKie=true;return {voice:requestedVoice,autoRegional:false};}throw e});
       const voice=resolved.voice;
-      const style=buildSpeechStyle(voice);
+      const style=lockedStyle(buildSpeechStyle(voice),voice);
       const mode=$('stabilityMode').value;
       const chunkSize=parseInt($('chunkSize').value,10)||3000;
       const useChunks=usingKie || mode==='chunk' || (mode==='auto' && txt.length>6000);
@@ -1205,15 +1223,27 @@ ${txt}`;
 
       setStatus($('ttsStatus'),`${usingKie?KIE_MODEL:model} đang tạo ${chunks.length>1?chunks.length+' đoạn':'giọng'} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice vùng đã khóa':'Voice'} ${voice}...`,'busy');
 
-      const results=[]; const usedKeys=[];
+      let results=[]; let usedKeys=[];
+      let restartWithKie=false;
       for(let i=0;i<chunks.length;i++){
         setStatus($('ttsStatus'),`Đang tạo đoạn ${i+1}/${chunks.length} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice vùng':'Voice'} ${voice}...`,'busy');
         let r;
         if(usingKie) r=await kieGenerateChunk(chunks[i],voice,style,i+1,chunks.length);
         else try{r=await generateTTSChunk(chunks[i],voice,style,i+1,chunks.length)}catch(e){
-          if($('kieAutoFallback').checked&&currentKieKey()&&googleFallbackEligible(e)){usingKie=true;setStatus($('ttsStatus'),'Google không khả dụng. Đã chuyển sang Kie dự phòng.','busy');r=await kieGenerateChunk(chunks[i],voice,style,i+1,chunks.length)}else throw e;
+          if($('kieAutoFallback').checked&&currentKieKey()&&googleFallbackEligible(e)){usingKie=true;restartWithKie=true;setStatus($('ttsStatus'),'Google bị gián đoạn. Để không đổi giọng giữa bài, đang tạo lại TOÀN BỘ audio bằng Kie...','busy');break;}else throw e;
         }
         results.push(r); usedKeys.push(r.source==='Kie'?'KIE':r.keyIndex+1);
+      }
+      if(restartWithKie){
+        results=[];usedKeys=[];
+        const kieChunks=splitTextForTTS(txt,Math.min(chunkSize,1800));
+        const kieVoice=isCustomVoice(requestedVoice)?(inferVoiceGender(requestedVoice)==='male'?'Puck':'Kore'):requestedVoice;
+        const kieStyle=lockedStyle(buildSpeechStyle(kieVoice),kieVoice);
+        for(let i=0;i<kieChunks.length;i++){
+          setStatus($('ttsStatus'),`Giữ cố định giọng Kie: tạo lại đoạn ${i+1}/${kieChunks.length}...`,'busy');
+          const r=await kieGenerateChunk(kieChunks[i],kieVoice,kieStyle,i+1,kieChunks.length);
+          results.push(r);usedKeys.push('KIE');
+        }
       }
 
       if(results.length===1){
@@ -1239,7 +1269,7 @@ ${txt}`;
       objectUrl=URL.createObjectURL(wavBlob);
       $('audio').src=objectUrl;$('downloadBtn').disabled=false;
       const keys=[...new Set(usedKeys)].map(x=>x==='KIE'?'KIE':('0'+x)).join(', ');
-      setStatus($('ttsStatus'),`Đã tạo thành công • ${usingKie?KIE_MODEL:model} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Đã khóa Voice vùng miền':'Voice'} ${voice} • API: ${keys}.`, 'ok');
+      setStatus($('ttsStatus'),`Đã tạo thành công • ${usingKie?KIE_MODEL:model} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice ID vùng đã chọn':'Voice'} ${voice} • API: ${keys}.`, 'ok');
       $('audio').play().catch(()=>{});
     }catch(e){setStatus($('ttsStatus'),e.message,'err')}
     finally{$('ttsBtn').disabled=false}
@@ -1253,6 +1283,7 @@ ${txt}`;
     const a=document.createElement('a'); a.href=objectUrl; a.download=`IDECO_AI_Voice_${new Date().toISOString().replace(/[:.]/g,'-')}.wav`; a.click();
   };
 
+  $('strictVoiceLock').addEventListener('change',()=>{localStorage.setItem('ideco_strict_voice_lock_v1',String($('strictVoiceLock').checked));});
   loadLocal(); renderVoices(); updateCount();
 
   // Try auto-sync only if a Firebase URL was already saved on this device.
