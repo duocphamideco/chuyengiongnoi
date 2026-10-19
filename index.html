@@ -151,13 +151,21 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
       <div>
         <label>Chế độ vùng miền</label>
         <select id="regionMode">
-          <option value="locked" selected>🔒 Khóa đúng vùng miền — khuyên dùng</option>
-          <option value="style">Chỉ hướng dẫn accent — nhanh hơn</option>
+          <option value="locked" selected>🔒 Dùng Voice Design riêng theo vùng — khuyên dùng</option>
+          <option value="style">Chỉ hướng dẫn phát âm (không đảm bảo)</option>
         </select>
-        <div class="small" style="margin-top:6px">Chế độ Khóa sẽ tự tạo Voice Design riêng cho vùng đã chọn ở lần dùng đầu tiên và tái sử dụng về sau.</div>
+        <div class="small" style="margin-top:6px">Chế độ 🔒 tạo/giữ một Voice ID riêng trên Google cho vùng đã chọn. Nếu Google lỗi, không tự đổi sang giọng Kie có thể sai vùng.</div>
       </div>
     </div>
 
+    <div class="subcard" style="background:#f5f9ff;margin:12px 0">
+      <div id="regionLockStatus" class="small" aria-live="polite">Đang kiểm tra cấu hình giọng vùng miền...</div>
+      <div class="toolbar">
+        <button class="btn btn-soft" id="previewRegionalBtn" type="button">🎧 Nghe thử giọng vùng đã chọn</button>
+        <button class="btn btn-soft" id="refreshRegionalBtn" type="button">🔄 Tạo lại giọng vùng này</button>
+      </div>
+      <div class="small" style="margin-top:6px">Hãy nghe thử để xác nhận phát âm. AI có thể chưa thể hiện chuẩn 100% đặc trưng vùng miền; nút tạo lại sẽ tạo một Voice ID mới nếu cần.</div>
+    </div>
     <div class="row">
       <div>
         <label>Phong cách đọc</label>
@@ -225,7 +233,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
 
     <label>Chỉ dẫn đọc riêng (không bắt buộc)</label>
     <input id="voiceInstruction" placeholder="Ví dụ: nhấn tên thuốc, đọc giá chậm và rõ, cuối câu hạ giọng tự nhiên...">
-    <div class="voiceHint"><b>Khóa vùng miền:</b> với Huế, Quảng Ngãi, Bình Định, Phú Yên, Hà Nội, Miền Bắc hoặc Miền Nam, ứng dụng có thể tự tạo một <code>voice_...</code> theo đúng vùng và lưu lại để dùng tiếp. Đây là cách ổn định hơn nhiều so với chỉ ghi vùng miền trong <code>speech_metadata.style</code>.</div>
+    <div class="voiceHint"><b>Giọng vùng miền:</b> ứng dụng dùng Voice Design riêng khi chọn Khóa vùng miền; mỗi API Google có thể có ID riêng. Với Kie, chỉ có thể hướng dẫn ngữ điệu bằng style, không thể tái sử dụng Voice Design Google. Vì vậy chế độ khóa không tự dự phòng sang Kie.</div>
 
     <div class="subcard">
       <h3>🎙️ Tạo giọng riêng — Voice Design</h3>
@@ -285,7 +293,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     <h2>4. Tạo giọng nói</h2>
     <div class="subcard" style="margin:0 0 12px;background:#f0faf6;border-color:#a9ddce">
       <label class="inline" style="font-size:14px;margin:0"><input type="checkbox" id="strictVoiceLock" checked style="width:auto;accent-color:#087252"> 🔒 Khóa cố định giọng đọc & vùng miền xuyên suốt văn bản dài</label>
-      <div class="voiceHint">Dùng cùng một Voice ID và chỉ dẫn giọng ở mọi đoạn. Không ghép lẫn Google và Kie trong cùng một bài. Khi chuyển nguồn dự phòng, ứng dụng phải tạo lại toàn bộ các đoạn để tránh ghép hai giọng khác nhau. Khóa này giúp giảm đổi giọng nhưng không bảo đảm tuyệt đối chất giọng vùng miền của mô hình.</div>
+      <div class="voiceHint">Đối với giọng vùng miền đã thiết kế, tái sử dụng cùng Voice ID ở tất cả các đoạn, không ghép lẫn hai nguồn hoặc hai API Google. Khi Google lỗi, sẽ tạo lại trọn bài với Voice ID vùng tương ứng trên API Google tiếp theo. Không thể bảo đảm tuyệt đối chất giọng của mô hình.</div>
     </div>
     <div class="subcard" style="margin-bottom:12px;background:#f5f9ff">
        <div class="inline" style="justify-content:space-between;flex-wrap:wrap"><b>🔀 Nguồn tạo giọng đọc</b><button class="btn btn-soft" id="kieToggle" type="button" aria-pressed="false">🟢 Google chính · Bật Kie dự phòng</button></div>
@@ -393,6 +401,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   const $ = id => document.getElementById(id);
   const ADMIN_PASS = 'minhtriet1973';
   const LOCAL_KEY = 'idecoVoiceStudioConfigV1';
+  const REGION_PREF_KEY = 'ideco_region_voice_preferences_v3';
 
   // Firebase project configuration supplied by IDECO.
   // Realtime Database still requires its databaseURL endpoint.
@@ -428,6 +437,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   let activeKeyIndex = 0;
   let customVoices = [];
   let regionalVoiceIds = {};
+  let regionPreviewBusy = false;
   let lastCreatedVoiceId = '';
   let previewObjectUrl = null;
   const KIE_KEY_STORAGE='ideco_kie_tts_key_v1';
@@ -447,7 +457,8 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   function renderKieMode(){
     const button=$('kieToggle');
     if(button){button.textContent=kieManual?'🟠 KIE đang bật · Quay lại Google':'🟢 Google chính · Bật Kie dự phòng';button.setAttribute('aria-pressed',String(kieManual));button.className='btn '+(kieManual?'btn-good':'btn-soft');}
-    if($('kieModeStatus')) $('kieModeStatus').textContent=kieManual?'Đang chọn Kie Flash-Lite TTS cho thao tác tạo audio.':'Đang ưu tiên Google AI Studio, Kie dùng khi bật hoặc tự dự phòng.';
+    if($('kieModeStatus')) $('kieModeStatus').textContent=kieManual?'Đang chọn Kie Flash-Lite TTS (không hỗ trợ Voice ID vùng Google).':'Đang ưu tiên Google AI Studio, Kie dùng khi bật hoặc tự dự phòng.';
+    updateRegionLockStatus();
   }
   function currentKieKey(){return ($('kieApiKey')?.value||localStorage.getItem(KIE_KEY_STORAGE)||KIE_INITIAL_KEY).trim();}
   function loadLocal(){
@@ -474,7 +485,13 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
       $('geminiKey2').value = runtimeKeys[1];
       $('geminiKey3').value = runtimeKeys[2];
       updateKeyInfo();
+      // Preserve the user's last selected region and gender between reloads.
+      const preferences=JSON.parse(localStorage.getItem(REGION_PREF_KEY)||'{}');
+      if(preferences.gender && [...$('gender').options].some(o=>o.value===preferences.gender)) $('gender').value=preferences.gender;
+      if(preferences.region && [...$('region').options].some(o=>o.value===preferences.region)) $('region').value=preferences.region;
       if($('voice')) renderVoices();
+      if(preferences.voice && [...$('voice').options].some(o=>o.value===preferences.voice)) $('voice').value=preferences.voice;
+      updateRegionLockStatus();
     }catch(e){}
   }
   function saveLocal(){
@@ -605,8 +622,9 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
       msg.includes('network');
   }
 
-  async function geminiFetchWithFailover(url, optionsFactory, label='Gemini'){
-    const pool=await ensureKeys();
+  async function geminiFetchWithFailover(url, optionsFactory, label='Gemini', onlyIndexes=null){
+    const pool=(await ensureKeys()).filter(x=>!onlyIndexes||onlyIndexes.includes(x.index));
+    if(!pool.length) throw new Error(`${label}: Google API được chọn chưa có key.`);
     let lastErr=null;
     for(let attempt=0; attempt<pool.length; attempt++){
       const item=pool[attempt];
@@ -699,20 +717,47 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     return $('designGender')?.value || 'neutral';
   }
 
-  function regionalVoiceKey(region,gender){
-    return `${region}__${gender||'neutral'}__v2`;
+  // A stored Voice Design is owned by the Google project that created it.
+  // Avoid reusing a Voice ID under another API key or an older regional prompt (v2).
+  function regionalVoiceKey(region,gender,keyIndex){
+    const apiKey=runtimeKeys[keyIndex] || '';
+    let hash=2166136261;
+    for(const char of apiKey){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619)}
+    return `${region}__${gender||'neutral'}__v3__api${keyIndex}__${(hash>>>0).toString(36)}`;
   }
 
-  async function createRegionalVoice(region,gender,baseVoice){
+  function isRegionalLocked(){
+    return $('region')?.value!=='standard' && $('regionMode')?.value==='locked';
+  }
+
+  function updateRegionLockStatus(){
+    const node=$('regionLockStatus');
+    if(!node) return;
+    const region=$('region')?.value||'standard';
+    const name=REGION_LABEL[region]||'Tiếng Việt chuẩn';
+    if(region==='standard'){
+      node.textContent='Vùng: Tiếng Việt chuẩn. Có thể dùng Google hoặc Kie theo cài đặt.';
+    }else if(!isRegionalLocked()){
+      node.textContent=`⚠️ ${name}: chỉ dùng chỉ dẫn accent; không có Voice ID đặc trưng vùng. Kie có thể đọc khác vùng đã chọn.`;
+    }else if(kieManual){
+      node.textContent=`⚠️ Đang chọn Kie nhưng đã khóa giọng ${name}. Hãy tắt Kie để dùng Google Voice Design, hoặc đổi Chế độ vùng miền sang “Chỉ hướng dẫn phát âm” nếu chấp nhận kết quả không chắc đúng vùng.`;
+    }else{
+      const gender=inferVoiceGender($('voice')?.value||'');
+      const matches=Object.values(regionalVoiceIds).filter(v=>v?.region===region&&v?.gender===gender&&v?.version===3);
+      node.textContent=`🔒 ${name} (${gender==='male'?'Nam':gender==='female'?'Nữ':'Trung tính'}): Google sẽ dùng giọng vùng riêng. ${matches.length?'Có Voice ID từng tạo; có thể nghe thử hoặc tạo lại.':'Lần đầu đọc sẽ tạo Voice Design mới.'} Nếu Google lỗi, không tự dùng Kie sai vùng.`;
+    }
+  }
+
+  async function createRegionalVoice(region,gender,baseVoice,preferredKeyIndex=null){
     const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
     const regional=REGION_DESIGN[region];
-    if(!regional) return baseVoice;
+    if(!regional) return {id:baseVoice,keyIndex:null};
     const voiceTrait=voices.find(v=>v[0]===baseVoice)?.[1] || 'natural, warm and conversational';
-    const displayName=`IDECO ${REGION_LABEL[region]} ${gender==='male'?'Nam':gender==='female'?'Nữ':'Trung tính'} v2`;
+    const displayName=`IDECO ${REGION_LABEL[region]} ${gender==='male'?'Nam':gender==='female'?'Nữ':'Trung tính'} v3`;
     const prompt=[
       gender==='male'?'Adult male Vietnamese voice':gender==='female'?'Adult female Vietnamese voice':'Adult gender-neutral Vietnamese voice',
       regional,
-      `Vocal character: ${voiceTrait}. Human-like studio fidelity, natural breathing, conversational realism, expressive but never overacted.`
+      `Vocal character: ${voiceTrait}. Natural breathing and everyday conversational realism. Regional pronunciation learned since childhood, not a staged imitation.`
     ].join('. ');
     const {data,keyIndex}=await geminiFetchWithFailover(
       'https://generativelanguage.googleapis.com/v1beta/voices',
@@ -720,33 +765,52 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
         method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
         body:JSON.stringify({store:true,voice:{model,type:'prompted',display_name:displayName,gender,language_code:'vi-VN',prompted:{input:prompt}}})
       }),
-      `Voice Design ${REGION_LABEL[region]}`
+      `Voice Design ${REGION_LABEL[region]}`,
+      preferredKeyIndex===null?null:[preferredKeyIndex]
     );
     const id=data?.id || data?.voice?.id;
     if(!id) throw new Error(`Google chưa trả về Voice ID cho giọng ${REGION_LABEL[region]}.`);
     rememberCustomVoice(id,displayName,'prompted');
-    const sample=data?.sample_audio?.data || data?.sampleAudio?.data;
-    const mime=data?.sample_audio?.mime_type || data?.sampleAudio?.mimeType || 'audio/wav';
+    const sample=data?.prompted?.sample_audio?.data || data?.prompted?.sampleAudio?.data || data?.sample_audio?.data || data?.sampleAudio?.data;
+    const mime=data?.prompted?.sample_audio?.mime_type || data?.prompted?.sampleAudio?.mimeType || data?.sample_audio?.mime_type || data?.sampleAudio?.mimeType || 'audio/wav';
     if(sample) setVoicePreviewFromBase64(sample,mime);
-    regionalVoiceIds[regionalVoiceKey(region,gender)]={id,name:displayName,region,gender,createdAt:new Date().toISOString()};
-    try{ saveLocal(); await firebaseWrite(); }catch(e){}
+    regionalVoiceIds[regionalVoiceKey(region,gender,keyIndex)]={id,name:displayName,region,gender,createdAt:new Date().toISOString(),version:3,keyIndex};
+    try{saveLocal();await firebaseWrite()}catch(e){
+      setStatus($('voiceDesignStatus'),`Đã tạo Voice ID ${id} nhưng chưa đồng bộ Firebase: ${e.message}`,'err');
+    }
+    updateRegionLockStatus();
     return {id,keyIndex};
   }
 
-  async function resolveVoiceForRegion(baseVoice){
+  async function resolveVoiceForRegion(baseVoice,excludedKeyIndices=[],forceNew=false){
     const region=$('region')?.value || 'standard';
     const mode=$('regionMode')?.value || 'locked';
-    if(region==='standard' || mode!=='locked') return {voice:baseVoice,autoRegional:false};
+    if(region==='standard' || mode!=='locked') return {voice:baseVoice,autoRegional:false,keyIndex:null};
     const gender=inferVoiceGender(baseVoice);
-    const key=regionalVoiceKey(region,gender);
-    const cached=regionalVoiceIds[key];
-    if(cached?.id){
-      rememberCustomVoice(cached.id,cached.name||`IDECO ${REGION_LABEL[region]}`,'prompted');
-      return {voice:cached.id,autoRegional:true,cached:true,gender};
+    const keys=(await ensureKeys()).filter(x=>!excludedKeyIndices.includes(x.index));
+    if(!keys.length) throw new Error(`Không còn Google API khả dụng để tạo giọng ${REGION_LABEL[region]}. Không tự chuyển sang Kie vì có thể sai vùng.`);
+    if(!forceNew){
+      for(const item of keys){
+        const cached=regionalVoiceIds[regionalVoiceKey(region,gender,item.index)];
+        if(cached?.id&&cached.region===region&&cached.gender===gender&&cached.version===3){
+          rememberCustomVoice(cached.id,cached.name||`IDECO ${REGION_LABEL[region]}`,'prompted');
+          return {voice:cached.id,autoRegional:true,cached:true,gender,keyIndex:item.index};
+        }
+      }
     }
-    setStatus($('ttsStatus'),`Lần đầu dùng ${REGION_LABEL[region]}: đang tạo và khóa một Voice Design ${gender==='male'?'Nam':gender==='female'?'Nữ':'Trung tính'} riêng cho vùng này...`,'busy');
-    const created=await createRegionalVoice(region,gender,baseVoice);
-    return {voice:created.id,autoRegional:true,cached:false,gender};
+    setStatus($('ttsStatus'),`Đang tạo Voice Design ${REGION_LABEL[region]} (${gender==='male'?'Nam':gender==='female'?'Nữ':'Trung tính'}) theo API Google...`,'busy');
+    let creationError=null;
+    for(const item of keys){
+      try{
+        // Every Voice Design must be created with the EXACT Google API that will synthesize it.
+        const created=await createRegionalVoice(region,gender,baseVoice,item.index);
+        return {voice:created.id,autoRegional:true,cached:false,gender,keyIndex:created.keyIndex};
+      }catch(e){
+        creationError=e;
+        if(!googleFallbackEligible(e)) throw e;
+      }
+    }
+    throw new Error(`Không tạo được Voice Design ${REGION_LABEL[region]} trên các Google API đã cấu hình: ${creationError?.message||'lỗi không xác định'}. Không chuyển sang Kie để tránh sai vùng.`);
   }
 
   function buildSpeechStyle(voice){
@@ -760,7 +824,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     // Regional accent is an immutable trait ideally carried by a designed/replicated voice.
     // For prebuilt voices we still pass a concise regional delivery target for immediate use.
     if(!isCustomVoice(voice) && $('region').value!=='standard') bits.push(REGION_STYLE[$('region').value]);
-    if(isCustomVoice(voice) && $('regionMode')?.value==='locked') bits.push('preserve the designed regional accent consistently; never drift to another Vietnamese region');
+    // A designed Voice ID itself carries immutable regional traits; do not try to re-design accent in style.
     const extra=$('voiceInstruction').value.trim();
     if(extra) bits.push(extra);
     return bits.filter(Boolean).join('; ');
@@ -831,8 +895,15 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
 
   $('text').addEventListener('input',updateCount);
   $('clearBtn').onclick=()=>{$('text').value='';updateCount()};
-  $('gender').onchange=renderVoices;
-  if($('regionMode')) $('regionMode').addEventListener('change',()=>{try{saveLocal()}catch(e){}});
+  function persistRegionPreferences(){
+    localStorage.setItem(REGION_PREF_KEY,JSON.stringify({
+      region:$('region').value,gender:$('gender').value,voice:$('voice').value
+    }));
+  }
+  $('gender').onchange=()=>{renderVoices();persistRegionPreferences();updateRegionLockStatus()};
+  $('voice').addEventListener('change',()=>{persistRegionPreferences();updateRegionLockStatus()});
+  $('region').addEventListener('change',()=>{persistRegionPreferences();updateRegionLockStatus()});
+  if($('regionMode')) $('regionMode').addEventListener('change',()=>{updateRegionLockStatus();try{saveLocal()}catch(e){}});
 
 
   function setVoicePreviewFromBase64(b64,mime='audio/wav'){
@@ -848,7 +919,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     const name=$('designName').value.trim() || `IDECO ${REGION_LABEL[$('region').value] || 'Voice'}`;
     const free=$('voiceDesignPrompt').value.trim();
     const gender=$('designGender').value;
-    const regional=REGION_STYLE[$('region').value] || REGION_STYLE.standard;
+    const regional=REGION_DESIGN[$('region').value] || REGION_STYLE.standard;
     const prompt=[
       `${gender==='male'?'Male':gender==='female'?'Female':'Gender-neutral'} Vietnamese adult voice`,
       regional,
@@ -1124,18 +1195,14 @@ ${txt}`;
   }
 
   function lockedStyle(style,voice){
-    const region=$('region').value;
     if(!$('strictVoiceLock').checked) return style;
-    const target=REGION_STYLE[region]||REGION_STYLE.standard;
-    return [
-      `VOICE IDENTITY LOCK. Speak the whole recording using the SAME single speaker, same age, gender, pitch, timbre, voice identity and speaking cadence. Voice name: ${voice}.`,
-      `REGIONAL ACCENT LOCK: ${target}. Keep this exact accent in EVERY sentence. Do not change to another Vietnamese dialect at paragraph boundaries.`,
-      'Avoid voice switching, style drift, pitch resets and abrupt changes across sections. Do not imitate additional speakers. Natural sustained narration.',
-      style
-    ].join(' ');
+    // Google recommends short metadata for persistent Voice Design; repeated accent-lock
+    // instructions can paradoxically destabilize the very accent we're preserving.
+    if(isCustomVoice(voice)) return style;
+    return `${style}; consistent single-speaker delivery`;
   }
 
-  async function generateTTSChunk(textChunk,voice,style,chunkNo,totalChunks){
+  async function generateTTSChunk(textChunk,voice,style,chunkNo,totalChunks,lockedKeyIndex=null){
     const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
     const ttsUrl=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
     const {data,keyIndex}=await geminiFetchWithFailover(
@@ -1154,12 +1221,61 @@ ${txt}`;
           }
         })
       }),
-      'Gemini 3.8 TTS'
+      'Gemini 3.8 TTS',
+      lockedKeyIndex===null?null:[lockedKeyIndex]
     );
     const payload=findAudioPayload(data);
     if(!payload?.data) throw new Error(`Đoạn ${chunkNo}: Gemini chưa trả về dữ liệu audio.`);
     return {bytes:base64ToBytes(payload.data),mimeType:payload.mimeType||'audio/wav',keyIndex};
   }
+
+  const REGIONAL_SAMPLE_TEXT={
+    standard:'Xin chào các bạn. Hôm nay mình thử một giọng đọc thật tự nhiên, rõ ràng và thân thiện nhé.',
+    south:'Chào các bạn nha! Hôm nay trời đẹp quá, mình ghé thăm nhau rồi cùng trò chuyện một chút nghen.',
+    north:'Chào các bạn. Hôm nay mình muốn kể một câu chuyện nhỏ, thật gần gũi và tự nhiên nhé.',
+    hanoi:'Chào các bạn. Mình đang đi dạo quanh phố Hà Nội, không khí hôm nay thật dễ chịu.',
+    hue:'Chào các bạn hí! Bữa ni trời ở Huế mát ghê, mình rủ nhau đi uống ly cà phê rồi chuyện trò một chút nghe.',
+    quangngai:'Chào bà con! Bữa ni trời đẹp quá, mình ghé quê nhà, ngồi chuyện trò cho vui nghe.',
+    binhdinh:'Chào bà con mình nha! Bữa ni về quê thấy thương quá, cùng nói chuyện thiệt tự nhiên nghe.',
+    phuyen:'Chào bà con! Bữa ni mình về Phú Yên, gió biển mát rượi, ngồi kể chuyện quê mình cho vui nghe.'
+  };
+  async function testRegionalVoice(forceNew=false){
+    if(regionPreviewBusy)return;
+    const region=$('region').value;
+    if(isRegionalLocked()&&kieManual){
+      setStatus($('voiceDesignStatus'),'Đang bật Kie. Hãy tắt Kie để nghe thử đúng Voice Design vùng miền trên Google.','err');return;
+    }
+    regionPreviewBusy=true;
+    $('previewRegionalBtn').disabled=true;
+    $('refreshRegionalBtn').disabled=true;
+    try{
+      setStatus($('voiceDesignStatus'),`Đang ${forceNew?'tạo lại':'chuẩn bị'} giọng ${REGION_LABEL[region]} để nghe thử...`,'busy');
+      const base=$('voice').value||'Kore';
+      const resolved=await resolveVoiceForRegion(base,[],forceNew&&isRegionalLocked());
+      const voice=resolved.voice;
+      const style=lockedStyle(buildSpeechStyle(voice),voice);
+      const sample=REGIONAL_SAMPLE_TEXT[region]||REGIONAL_SAMPLE_TEXT.standard;
+      const generated=await generateTTSChunk(sample,voice,style,1,1,resolved.autoRegional?resolved.keyIndex:null);
+      if(previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
+      let blob;
+      if(parseWavPCM(generated.bytes))blob=new Blob([generated.bytes],{type:'audio/wav'});
+      else if(/l16|pcm/i.test(generated.mimeType))blob=pcm16ToWav(generated.bytes);
+      else blob=new Blob([generated.bytes],{type:generated.mimeType});
+      previewObjectUrl=URL.createObjectURL(blob);
+      $('voicePreview').src=previewObjectUrl;
+      $('voicePreview').classList.remove('hidden');
+      setStatus($('voiceDesignStatus'),`🎧 Nghe thử ${REGION_LABEL[region]} • ${resolved.autoRegional?'Voice ID '+voice:'giọng '+voice} • API Google 0${generated.keyIndex+1}. Nếu nghe vẫn chưa đúng vùng, bấm “Tạo lại giọng vùng này”.`,'ok');
+      $('voicePreview').play().catch(()=>{});
+    }catch(e){setStatus($('voiceDesignStatus'),`Không tạo được bản thử: ${e.message}`,'err')}
+    finally{regionPreviewBusy=false;$('previewRegionalBtn').disabled=false;$('refreshRegionalBtn').disabled=false;updateRegionLockStatus()}
+  }
+  $('previewRegionalBtn').onclick=()=>testRegionalVoice(false);
+  $('refreshRegionalBtn').onclick=()=>{
+    if(!isRegionalLocked()){
+      setStatus($('voiceDesignStatus'),'Hãy chọn một vùng cụ thể và Chế độ 🔒 Voice Design riêng trước khi tạo lại.','err');return;
+    }
+    testRegionalVoice(true);
+  };
 
   const waitKie=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   async function kieJSON(url,options={}){
@@ -1212,38 +1328,59 @@ ${txt}`;
       $('ttsBtn').disabled=true;
       const requestedVoice=$('voice').value||'Kore';
       const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+      const regionalLock=isRegionalLocked();
+      if(regionalLock&&kieManual)throw Error(`Đang bật Kie nhưng đã khóa giọng ${REGION_LABEL[$('region').value]}. Hãy bấm “Quay lại Google” để dùng Voice Design theo vùng. Nếu chỉ muốn thử Kie, đổi Chế độ vùng miền sang “Chỉ hướng dẫn phát âm” (có thể sai giọng).`);
       let usingKie=kieManual;
-      let resolved=usingKie?{voice:requestedVoice,autoRegional:false}:await resolveVoiceForRegion(requestedVoice).catch(e=>{if($('kieAutoFallback').checked&&currentKieKey()&&googleFallbackEligible(e)){usingKie=true;return {voice:requestedVoice,autoRegional:false};}throw e});
-      const voice=resolved.voice;
-      const style=lockedStyle(buildSpeechStyle(voice),voice);
+      const allowKie=()=>!regionalLock&&$('kieAutoFallback').checked&&Boolean(currentKieKey());
       const mode=$('stabilityMode').value;
       const chunkSize=parseInt($('chunkSize').value,10)||3000;
-      const useChunks=usingKie || mode==='chunk' || (mode==='auto' && txt.length>6000);
-      const chunks=useChunks?splitTextForTTS(txt,usingKie?Math.min(chunkSize,1800):chunkSize):[txt];
+      let voice=requestedVoice,style='',resolved={voice:requestedVoice,autoRegional:false,keyIndex:null};
+      let results=[],usedKeys=[];
+      const excludedGoogleKeys=[];
 
-      setStatus($('ttsStatus'),`${usingKie?KIE_MODEL:model} đang tạo ${chunks.length>1?chunks.length+' đoạn':'giọng'} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice vùng đã khóa':'Voice'} ${voice}...`,'busy');
+      // Restart the entire recording when switching Google projects or providers.
+      // A designed Voice ID only exists in the Google project that created it.
+      while(true){
+        if(!usingKie){
+          try{resolved=await resolveVoiceForRegion(requestedVoice,excludedGoogleKeys)}
+          catch(e){
+            if(allowKie()&&googleFallbackEligible(e)){usingKie=true;resolved={voice:requestedVoice,autoRegional:false,keyIndex:null}}
+            else throw e;
+          }
+        }else resolved={voice:requestedVoice,autoRegional:false,keyIndex:null};
 
-      let results=[]; let usedKeys=[];
-      let restartWithKie=false;
-      for(let i=0;i<chunks.length;i++){
-        setStatus($('ttsStatus'),`Đang tạo đoạn ${i+1}/${chunks.length} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice vùng':'Voice'} ${voice}...`,'busy');
-        let r;
-        if(usingKie) r=await kieGenerateChunk(chunks[i],voice,style,i+1,chunks.length);
-        else try{r=await generateTTSChunk(chunks[i],voice,style,i+1,chunks.length)}catch(e){
-          if($('kieAutoFallback').checked&&currentKieKey()&&googleFallbackEligible(e)){usingKie=true;restartWithKie=true;setStatus($('ttsStatus'),'Google bị gián đoạn. Để không đổi giọng giữa bài, đang tạo lại TOÀN BỘ audio bằng Kie...','busy');break;}else throw e;
-        }
-        results.push(r); usedKeys.push(r.source==='Kie'?'KIE':r.keyIndex+1);
-      }
-      if(restartWithKie){
+        voice=resolved.voice;
+        style=lockedStyle(buildSpeechStyle(voice),voice);
+        const useChunks=usingKie||mode==='chunk'||(mode==='auto'&&txt.length>6000);
+        const chunks=useChunks?splitTextForTTS(txt,usingKie?Math.min(chunkSize,1800):chunkSize):[txt];
         results=[];usedKeys=[];
-        const kieChunks=splitTextForTTS(txt,Math.min(chunkSize,1800));
-        const kieVoice=isCustomVoice(requestedVoice)?(inferVoiceGender(requestedVoice)==='male'?'Puck':'Kore'):requestedVoice;
-        const kieStyle=lockedStyle(buildSpeechStyle(kieVoice),kieVoice);
-        for(let i=0;i<kieChunks.length;i++){
-          setStatus($('ttsStatus'),`Giữ cố định giọng Kie: tạo lại đoạn ${i+1}/${kieChunks.length}...`,'busy');
-          const r=await kieGenerateChunk(kieChunks[i],kieVoice,kieStyle,i+1,kieChunks.length);
-          results.push(r);usedKeys.push('KIE');
+        setStatus($('ttsStatus'),`Đang tạo ${chunks.length} đoạn • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice ID '+voice:voice} • ${usingKie?'Kie':`Google API 0${(resolved.keyIndex??activeKeyIndex)+1}`}...`,'busy');
+        let restart=false;
+        for(let i=0;i<chunks.length;i++){
+          setStatus($('ttsStatus'),`Đang tạo đoạn ${i+1}/${chunks.length} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice vùng riêng':'Giọng dựng sẵn'} • ${usingKie?'Kie':`Google API 0${(resolved.keyIndex??activeKeyIndex)+1}`}...`,'busy');
+          let r;
+          try{
+            r=usingKie
+              ? await kieGenerateChunk(chunks[i],voice,style,i+1,chunks.length)
+              : await generateTTSChunk(chunks[i],voice,style,i+1,chunks.length,resolved.autoRegional?resolved.keyIndex:null);
+          }catch(e){
+            if(!usingKie&&regionalLock&&googleFallbackEligible(e)){
+              excludedGoogleKeys.push(resolved.keyIndex);
+              const available=(await ensureKeys()).filter(x=>!excludedGoogleKeys.includes(x.index));
+              if(!available.length)throw Error(`Không thể tạo audio giọng ${REGION_LABEL[$('region').value]} với các Google API hiện có: ${e.message}. Ứng dụng đã DỪNG thay vì tự đổi sang giọng miền khác qua Kie.`);
+              setStatus($('ttsStatus'),`Google API 0${resolved.keyIndex+1} lỗi. Đang tìm Voice Design ${REGION_LABEL[$('region').value]} trên Google API khác và sẽ tạo lại TOÀN BỘ bài...`,'busy');
+              restart=true;break;
+            }
+            if(!usingKie&&allowKie()&&googleFallbackEligible(e)){
+              usingKie=true;
+              setStatus($('ttsStatus'),'Google lỗi. Đang tạo lại toàn bộ bài trên Kie, không ghép lẫn hai nguồn...','busy');
+              restart=true;break;
+            }
+            throw e;
+          }
+          results.push(r);usedKeys.push(r.source==='Kie'?'KIE':r.keyIndex+1);
         }
+        if(!restart)break;
       }
 
       if(results.length===1){
@@ -1269,7 +1406,7 @@ ${txt}`;
       objectUrl=URL.createObjectURL(wavBlob);
       $('audio').src=objectUrl;$('downloadBtn').disabled=false;
       const keys=[...new Set(usedKeys)].map(x=>x==='KIE'?'KIE':('0'+x)).join(', ');
-      setStatus($('ttsStatus'),`Đã tạo thành công • ${usingKie?KIE_MODEL:model} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice ID vùng đã chọn':'Voice'} ${voice} • API: ${keys}.`, 'ok');
+      setStatus($('ttsStatus'),`Đã tạo audio • ${usingKie?KIE_MODEL:model} • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice Design vùng riêng':'Voice'} ${voice} • API: ${keys}.${!resolved.autoRegional&&$('region').value!=='standard'?' Đây chỉ là hướng dẫn accent; hãy nghe kiểm tra vì chưa thể bảo đảm vùng miền.':''}`, 'ok');
       $('audio').play().catch(()=>{});
     }catch(e){setStatus($('ttsStatus'),e.message,'err')}
     finally{$('ttsBtn').disabled=false}
@@ -1284,7 +1421,7 @@ ${txt}`;
   };
 
   $('strictVoiceLock').addEventListener('change',()=>{localStorage.setItem('ideco_strict_voice_lock_v1',String($('strictVoiceLock').checked));});
-  loadLocal(); renderVoices(); updateCount();
+  loadLocal(); renderVoices(); updateCount(); updateRegionLockStatus();
 
   // Try auto-sync only if a Firebase URL was already saved on this device.
   setTimeout(async()=>{
