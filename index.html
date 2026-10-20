@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IDECO AI Voice Studio</title>
+<title>IDECO AI Voice Studio — Clone Voice Micro</title>
 <style>
 :root{
   --bg:#f4f7fb;--card:#fff;--ink:#132238;--muted:#6c7a90;--line:#dce5f0;
@@ -247,21 +247,62 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
         <button class="btn btn-primary" id="createVoiceBtn">✨ Tạo giọng riêng</button>
         <button class="btn btn-soft" id="useCustomVoiceBtn" disabled>✅ Dùng giọng vừa tạo</button>
       </div>
-      <div id="voiceDesignStatus" class="status">Voice Design sẽ tạo một ID <code>voice_...</code> lưu trong Google Project; ứng dụng chỉ lưu ID giọng để dùng lại.</div>
+      <div id="voiceDesignStatus" class="status">Voice Design dùng model tạo giọng mặc định của Google, không dùng model Flash Lite TTS để tạo giọng. Sau khi tạo Voice ID, có thể dùng model TTS đã chọn để tổng hợp âm thanh. ID <code>voice_...</code> được lưu để sử dụng lại.</div>
       <audio id="voicePreview" controls class="hidden"></audio>
     </div>
 
-    <details class="advanced">
-      <summary>🎤 Nhân bản giọng của chính mình (Voice Replication)</summary>
-      <p class="small">Dùng khi muốn giọng tổng hợp bám theo chính giọng thật của người sở hữu. Google yêu cầu 2 file WAV của cùng một người trưởng thành: mẫu giọng 10–30 giây và file đồng ý.</p>
-      <div class="consent"><b>Câu đồng ý phải đọc nguyên văn:</b><br>“Tôi là chủ sở hữu giọng nói này và tôi đồng ý cho Google sử dụng giọng nói này để tạo mô hình giọng nói tổng hợp.”</div>
-      <div class="row">
-        <div><label>Mẫu giọng (WAV 10–30 giây)</label><input id="sourceVoiceFile" type="file" accept="audio/wav,.wav"></div>
-        <div><label>File đọc câu đồng ý (WAV)</label><input id="consentVoiceFile" type="file" accept="audio/wav,.wav"></div>
+    <details class="advanced" id="replicaPanel" open>
+      <summary>🎤 Clone Voice — Thu micro, phân tích &amp; tạo giọng riêng</summary>
+      <p class="small">Thu giọng trực tiếp 10–30 giây trên điện thoại hoặc máy tính. Sau khi kiểm tra chất lượng và nghe lại, thu thêm lời xác nhận để Google tạo Voice ID. Chỉ sử dụng giọng của chính mình hoặc người trưởng thành đồng ý trực tiếp.</p>
+
+      <div class="subcard" style="background:#f5f9ff">
+        <h3>① Thu mẫu giọng trực tiếp (10–30 giây)</h3>
+        <div class="consent">Gợi ý lời đọc: “Xin chào, hôm nay tôi đang thử ghi âm giọng nói của mình. Tôi sẽ nói với tốc độ bình thường, tự nhiên như đang trò chuyện, để hệ thống lưu lại cách phát âm, nhịp điệu và chất giọng của tôi.”</div>
+        <div class="toolbar">
+          <button type="button" class="btn btn-primary" id="recordSampleBtn">🎙️ Bắt đầu thu giọng</button>
+          <button type="button" class="btn btn-danger" id="stopSampleBtn" disabled>⏹ Dừng (sau 10 giây)</button>
+        </div>
+        <div class="inline" style="margin:10px 0;justify-content:space-between"><b id="sampleTimer">00:00 / 00:30</b><span class="small" id="sampleRecordState">Chưa ghi âm</span></div>
+        <div class="recordProgress"><div id="sampleProgress" class="recordProgressBar"></div></div>
+        <audio id="samplePlayback" controls class="hidden" aria-label="Nghe lại mẫu giọng"></audio>
+        <label for="sourceVoiceFile">Hoặc tải mẫu WAV có sẵn</label>
+        <input id="sourceVoiceFile" type="file" accept="audio/wav,.wav,audio/*">
+        <div class="small">Ứng dụng tự chuyển mẫu sang WAV mono 24 kHz, 16-bit. Chỉ lưu bản ghi trong phiên làm việc hiện tại, không lưu file âm thanh lên Firebase.</div>
+        <div id="sampleStatus" class="status">Bấm Bắt đầu thu giọng và cho phép truy cập micro (cần HTTPS hoặc localhost).</div>
       </div>
-      <label>Tên giọng nhân bản</label><input id="replicaName" placeholder="Ví dụ: Giọng Anh Duy Thức">
-      <div class="toolbar"><button class="btn btn-primary" id="replicateVoiceBtn">🧬 Tạo giọng nhân bản</button></div>
-      <div id="replicaStatus" class="status">Chỉ thực hiện với giọng mà người nói sở hữu và đã đọc câu đồng ý bắt buộc.</div>
+
+      <div class="subcard">
+        <h3>② Phân tích giọng nói</h3>
+        <button type="button" class="btn btn-soft" id="analyzeReplicaBtn" disabled>🔎 Phân tích giọng nói</button>
+        <div id="replicaAnalysisBox" class="status">Chưa có mẫu. Sau khi thu đủ 10–30 giây, bấm Phân tích để đánh giá chất lượng âm thanh và đặc điểm phát âm.</div>
+        <div class="small">Phân tích tại máy: thời lượng, độ lớn và đoạn có tiếng nói. Khi có Gemini API, ứng dụng cũng có thể yêu cầu AI mô tả âm sắc, nhịp điệu và mức độ rõ lời; nhận xét không phải xác minh danh tính.</div>
+      </div>
+
+      <div class="subcard" style="background:#f8fcfa">
+        <h3>③ Thu xác nhận đồng ý bằng micro</h3>
+        <p class="small">Google bắt buộc có bản ghi riêng do <b>chính người đã thu mẫu giọng</b> đọc nguyên văn:</p>
+        <div class="consent" id="cloneConsentPhrase"><b>“Tôi là chủ sở hữu giọng nói này và tôi đồng ý cho Google sử dụng giọng nói này để tạo mô hình giọng nói tổng hợp.”</b></div>
+        <div class="toolbar">
+          <button type="button" class="btn btn-good" id="recordConsentBtn">🎙️ Thu lời đồng ý</button>
+          <button type="button" class="btn btn-danger" id="stopConsentBtn" disabled>⏹ Dừng thu</button>
+        </div>
+        <div class="inline" style="margin:10px 0;justify-content:space-between"><b id="consentTimer">00:00 / 00:45</b><span class="small" id="consentRecordState">Chưa ghi âm</span></div>
+        <div class="recordProgress"><div id="consentProgress" class="recordProgressBar"></div></div>
+        <audio id="consentPlayback" controls class="hidden" aria-label="Nghe lại lời đồng ý"></audio>
+        <label for="consentVoiceFile">Hoặc tải WAV lời đồng ý của cùng người nói</label>
+        <input id="consentVoiceFile" type="file" accept="audio/wav,.wav,audio/*">
+        <div id="consentStatus" class="status">Cần bản ghi riêng (khoảng 4–45 giây). Không dùng giọng AI để đọc lời đồng ý.</div>
+      </div>
+
+      <div class="subcard">
+        <h3>④ Đặt tên &amp; tạo Voice ID mới</h3>
+        <label for="replicaName">Tên giọng nhân bản</label>
+        <input id="replicaName" maxlength="75" placeholder="Ví dụ: Giọng Triết IDECO - Huế" autocomplete="off">
+        <label class="inline" style="font-weight:600"><input type="checkbox" id="replicaConsentCheck" style="width:auto"> Tôi xác nhận hai bản ghi đều của chính tôi, hoặc của người trưởng thành đang trực tiếp đồng ý; tôi có quyền tạo và sử dụng giọng này.</label>
+        <button type="button" class="btn btn-primary" id="replicateVoiceBtn" disabled style="width:100%;margin-top:12px">🧬 Tạo Voice mới từ giọng đã thu</button>
+        <div id="replicaStatus" class="status">Cần hoàn tất mẫu giọng, phân tích, lời đồng ý và đặt tên. Sau khi tạo, Voice ID sẽ xuất hiện trong danh sách giọng Google và lưu đồng bộ Firebase (chỉ ID/tên, không lưu bản ghi).</div>
+        <div id="createdReplicaPanel" class="hidden" style="margin-top:12px"><label>Voice ID vừa tạo</label><div class="keyrow"><input id="createdReplicaId" class="voice-id" readonly><button type="button" class="btn btn-soft" id="copyReplicaIdBtn">📋 Sao chép</button></div></div>
+      </div>
     </details>
 
     <div class="subcard">
@@ -749,7 +790,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   }
 
   async function createRegionalVoice(region,gender,baseVoice,preferredKeyIndex=null){
-    const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+    // Voice Design uses Google's default creation model; selected TTS model is for synthesis only.
     const regional=REGION_DESIGN[region];
     if(!regional) return {id:baseVoice,keyIndex:null};
     const voiceTrait=voices.find(v=>v[0]===baseVoice)?.[1] || 'natural, warm and conversational';
@@ -763,7 +804,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
       'https://generativelanguage.googleapis.com/v1beta/voices',
       key=>({
         method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-        body:JSON.stringify({store:true,voice:{model,type:'prompted',display_name:displayName,gender,language_code:'vi-VN',prompted:{input:prompt}}})
+        body:JSON.stringify({store:true,voice:{type:'prompted',display_name:displayName,gender,language_code:'vi-VN',prompted:{input:prompt}}})
       }),
       `Voice Design ${REGION_LABEL[region]}`,
       preferredKeyIndex===null?null:[preferredKeyIndex]
@@ -785,6 +826,8 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   async function resolveVoiceForRegion(baseVoice,excludedKeyIndices=[],forceNew=false){
     const region=$('region')?.value || 'standard';
     const mode=$('regionMode')?.value || 'locked';
+    const cloned=customVoices.find(v=>v.id===baseVoice && v.type==='replicated');
+    if(cloned) return {voice:baseVoice,autoRegional:false,keyIndex:Number.isInteger(cloned.keyIndex)?cloned.keyIndex:null};
     if(region==='standard' || mode!=='locked') return {voice:baseVoice,autoRegional:false,keyIndex:null};
     const gender=inferVoiceGender(baseVoice);
     const keys=(await ensureKeys()).filter(x=>!excludedKeyIndices.includes(x.index));
@@ -928,12 +971,12 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     try{
       $('createVoiceBtn').disabled=true;
       setStatus($('voiceDesignStatus'),'Đang tạo Voice Design mới bằng Gemini 3.8...','busy');
-      const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+      // Do not pass TTS model to voice creation: Flash Lite TTS cannot create Prompted Voices.
       const {data,keyIndex}=await geminiFetchWithFailover(
         'https://generativelanguage.googleapis.com/v1beta/voices',
         key=>({
           method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key},
-          body:JSON.stringify({store:true,voice:{model,type:'prompted',display_name:name,gender,language_code:'vi-VN',prompted:{input:prompt}}})
+          body:JSON.stringify({store:true,voice:{type:'prompted',display_name:name,gender,language_code:'vi-VN',prompted:{input:prompt}}})
         }), 'Gemini Voice Design'
       );
       const id=data?.id || data?.voice?.id;
@@ -965,34 +1008,275 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     setStatus($('voiceDesignStatus'),`Đã chọn ${id}.`,'ok');
   };
 
-  $('replicateVoiceBtn').onclick=async()=>{
-    const source=$('sourceVoiceFile').files?.[0];
-    const consent=$('consentVoiceFile').files?.[0];
-    const name=$('replicaName').value.trim() || 'IDECO Replicated Voice';
-    if(!source||!consent){setStatus($('replicaStatus'),'Hãy chọn đủ 2 file WAV: mẫu giọng và file đọc câu đồng ý.','err');return}
+  // === IDECO Voice Clone microphone workflow (voice samples stay in browser memory). ===
+  const CLONE_RATE=24000;
+  const recorderState={active:null,source:null,consent:null,analysis:null,analysisOk:false,sourceUrl:null,consentUrl:null,busy:false};
+  const cloneFields=['replicaName','replicaConsentCheck','sourceVoiceFile','consentVoiceFile'];
+
+  function cloneSeconds(seconds){
+    const n=Math.max(0,Math.floor(seconds||0));
+    return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+  }
+  function updateCloneCreateButton(){
+    const hasName=$('replicaName').value.trim().length>0;
+    $('replicateVoiceBtn').disabled=recorderState.busy || Boolean(recorderState.active) ||
+      !recorderState.source || !recorderState.consent || !recorderState.analysisOk ||
+      !hasName || !$('replicaConsentCheck').checked;
+    $('analyzeReplicaBtn').disabled=Boolean(recorderState.active)||recorderState.busy||!recorderState.source;
+  }
+  cloneFields.forEach(id=>$(id).addEventListener(id==='replicaConsentCheck'?'change':'input',updateCloneCreateButton));
+  $('copyReplicaIdBtn').onclick=async()=>{
+    const value=$('createdReplicaId').value;
+    try{await navigator.clipboard.writeText(value);setStatus($('replicaStatus'),'Đã sao chép Voice ID.','ok')}
+    catch(e){$('createdReplicaId').select();setStatus($('replicaStatus'),'Hãy sao chép Voice ID đang được chọn.','busy')}
+  };
+
+  function revokeCloneUrl(kind){
+    const property=kind==='source'?'sourceUrl':'consentUrl';
+    if(recorderState[property])URL.revokeObjectURL(recorderState[property]);
+    recorderState[property]=null;
+  }
+  function updateCloneClip(kind,info){
+    recorderState[kind]=info;
+    revokeCloneUrl(kind);
+    const el=$(kind==='source'?'samplePlayback':'consentPlayback');
+    const status=$(kind==='source'?'sampleStatus':'consentStatus');
+    const type=kind==='source'?'mẫu giọng':'lời đồng ý';
+    const property=kind==='source'?'sourceUrl':'consentUrl';
+    const raw=URL.createObjectURL(info.blob);
+    recorderState[property]=raw;
+    el.src=raw;el.classList.remove('hidden');
+    const warning=info.rms<-39?' Âm thanh quá nhỏ, nên thu lại trong phòng yên tĩnh.':
+      info.clipping>0.003?' Có méo tiếng, nên để micro xa hơn.':'';
+    setStatus(status,`Đã nhận ${type}: ${info.duration.toFixed(1)} giây · WAV 24 kHz mono · ${Math.round(info.blob.size/1024)} KB.${warning}`,warning?'busy':'ok');
+    if(kind==='source'){
+      recorderState.analysis=null;recorderState.analysisOk=false;
+      setStatus($('replicaAnalysisBox'),'Mẫu giọng đã sẵn sàng. Bấm “Phân tích giọng nói” để tiếp tục.');
+      $('sampleRecordState').textContent=`Đã thu ${info.duration.toFixed(1)} giây`;
+      $('sampleTimer').textContent=cloneSeconds(info.duration)+' / 00:30';
+      $('sampleProgress').style.width=(Math.min(30,info.duration)/30*100)+'%';
+    }else{
+      $('consentRecordState').textContent=`Đã thu ${info.duration.toFixed(1)} giây`;
+      $('consentTimer').textContent=cloneSeconds(info.duration)+' / 00:45';
+      $('consentProgress').style.width=(Math.min(45,info.duration)/45*100)+'%';
+    }
+    $('createdReplicaPanel').classList.add('hidden');
+    updateCloneCreateButton();
+  }
+
+  function voiceSignalMetrics(pcm,rate){
+    let sum=0,peak=0,clip=0;
+    for(let i=0;i<pcm.length;i++){
+      const a=Math.abs(pcm[i]);sum+=a*a;if(a>peak)peak=a;if(a>=.985)clip++;
+    }
+    const rmsAmp=Math.sqrt(sum/Math.max(1,pcm.length));
+    let active=0,frames=0;
+    const step=Math.round(.04*rate);
+    for(let off=0;off<pcm.length;off+=step){
+      const end=Math.min(off+step,pcm.length);
+      let energy=0;
+      for(let i=off;i<end;i++)energy+=pcm[i]*pcm[i];
+      if(Math.sqrt(energy/(end-off))>.015)active++;
+      frames++;
+    }
+    return {rms:20*Math.log10(Math.max(0.00001,rmsAmp)),peak,
+      clipping:clip/Math.max(1,pcm.length),speechRatio:active/Math.max(1,frames)};
+  }
+
+  function encodeCloneWave(pcm){
+    const bytes=new Uint8Array(pcm.length*2),view=new DataView(bytes.buffer);
+    for(let i=0;i<pcm.length;i++){
+      const v=Math.max(-1,Math.min(1,pcm[i]));
+      view.setInt16(i*2,v<0?v*0x8000:v*0x7fff,true);
+    }
+    return pcm16ToWav(bytes,CLONE_RATE,1);
+  }
+  async function prepareCloneAudio(blob,kind){
+    if(!blob?.size)throw Error('File ghi âm trống.');
+    if(blob.size>35*1024*1024)throw Error('File quá lớn; chỉ dùng clip giọng ngắn.');
+    const buffer=await blob.arrayBuffer();
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    let decoded;
+    try{decoded=await ctx.decodeAudioData(buffer.slice(0));}
+    catch(e){throw Error('Trình duyệt không đọc được định dạng ghi âm. Hãy dùng Chrome/Safari mới nhất hoặc tải file WAV.');}
+    finally{await ctx.close().catch(()=>{});}
+    const duration=decoded.duration;
+    if(kind==='source'&&(duration<9.9||duration>30.05))throw Error(`Mẫu giọng dài ${duration.toFixed(1)} giây. Cần 10–30 giây; vui lòng thu lại.`);
+    if(kind==='consent'&&(duration<3.5||duration>45.1))throw Error(`Lời đồng ý dài ${duration.toFixed(1)} giây. Hãy đọc rõ toàn câu (khoảng 4–45 giây).`);
+    const offline=new OfflineAudioContext(1,Math.ceil(duration*CLONE_RATE),CLONE_RATE);
+    const source=offline.createBufferSource();
+    source.buffer=decoded;source.connect(offline.destination);source.start();
+    const reduced=await offline.startRendering();
+    const pcm=reduced.getChannelData(0);
+    const metrics=voiceSignalMetrics(pcm,CLONE_RATE);
+    if(metrics.rms<-55)throw Error('Tín hiệu quá nhỏ hoặc gần như im lặng. Hãy kiểm tra micro và thu lại.');
+    return {blob:encodeCloneWave(pcm),duration,...metrics};
+  }
+
+  async function acceptCloneFile(kind,file){
+    if(!file)return;
     try{
-      $('replicateVoiceBtn').disabled=true;
-      setStatus($('replicaStatus'),'Đang xác minh và tạo giọng nhân bản...','busy');
-      const sourceB64=await fileToBase64(source), consentB64=await fileToBase64(consent);
-      const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
+      setStatus($(kind==='source'?'sampleStatus':'consentStatus'),'Đang chuyển âm thanh sang WAV 24 kHz...','busy');
+      const info=await prepareCloneAudio(file,kind);
+      updateCloneClip(kind,info);
+    }catch(e){setStatus($(kind==='source'?'sampleStatus':'consentStatus'),e.message,'err')}
+  }
+  $('sourceVoiceFile').onchange=()=>acceptCloneFile('source',$('sourceVoiceFile').files?.[0]);
+  $('consentVoiceFile').onchange=()=>acceptCloneFile('consent',$('consentVoiceFile').files?.[0]);
+
+  function cloneRecUi(kind,secs){
+    const label=kind==='source'?'sample':'consent';
+    const max=kind==='source'?30:45;
+    $(label+'Timer').textContent=cloneSeconds(Math.min(max,secs))+' / '+cloneSeconds(max);
+    $(label+'Progress').style.width=(Math.min(1,secs/max)*100)+'%';
+    const stop=$(kind==='source'?'stopSampleBtn':'stopConsentBtn');
+    stop.disabled=kind==='source'?secs<10.3:secs<4.0;
+    $(label+'RecordState').textContent=kind==='source'&&secs<10.3?`Đang thu — còn ${(10.3-secs).toFixed(0)}s để đủ mẫu`:'🔴 Đang ghi âm';
+    $(label+'RecordState').className='small recordingAlert';
+  }
+  async function startCloneRec(kind){
+    if(recorderState.active){setStatus($('replicaStatus'),'Hãy dừng bản ghi đang thực hiện trước.','err');return}
+    if(!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder){
+      setStatus($(kind==='source'?'sampleStatus':'consentStatus'),'Trình duyệt chưa hỗ trợ thu micro. Mở trang bằng HTTPS và trình duyệt Chrome/Safari mới.','err');return;
+    }
+    let stream;
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false,channelCount:1}});
+      const types=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg;codecs=opus'];
+      const mime=types.find(t=>MediaRecorder.isTypeSupported(t));
+      const recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+      const chunks=[];
+      const state={kind,stream,recorder,chunks,start:performance.now(),ticker:null,stopPending:false};
+      recorderState.active=state;
+      $('recordSampleBtn').disabled=true;$('recordConsentBtn').disabled=true;
+      $('sourceVoiceFile').disabled=true;$('consentVoiceFile').disabled=true;
+      $('replicateVoiceBtn').disabled=true;$('analyzeReplicaBtn').disabled=true;
+      $(kind==='source'?'sampleRecordState':'consentRecordState').textContent='🔴 Đang ghi âm';
+      setStatus($(kind==='source'?'sampleStatus':'consentStatus'),'Micro đang ghi. Nói tự nhiên, rõ ràng; không bật nhạc nền.','busy');
+      recorder.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data)};
+      recorder.onerror=()=>setStatus($(kind==='source'?'sampleStatus':'consentStatus'),'Micro ghi âm bị lỗi. Hãy thử lại.','err');
+      recorder.onstop=async()=>{
+        clearInterval(state.ticker);stream.getTracks().forEach(t=>t.stop());
+        recorderState.active=null;
+        $('recordSampleBtn').disabled=false;$('recordConsentBtn').disabled=false;
+        $('sourceVoiceFile').disabled=false;$('consentVoiceFile').disabled=false;
+        $('stopSampleBtn').disabled=true;$('stopConsentBtn').disabled=true;
+        $(kind==='source'?'sampleRecordState':'consentRecordState').className='small';
+        try{
+          const blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});
+          const info=await prepareCloneAudio(blob,kind);
+          updateCloneClip(kind,info);
+        }catch(e){setStatus($(kind==='source'?'sampleStatus':'consentStatus'),e.message,'err')}
+        finally{updateCloneCreateButton()}
+      };
+      recorder.start(300);
+      state.start=performance.now();
+      const max=kind==='source'?29.6:44.5;
+      state.ticker=setInterval(()=>{
+        const secs=(performance.now()-state.start)/1000;
+        cloneRecUi(kind,secs);
+        if(secs>=max)stopCloneRec(kind,true);
+      },160);
+      updateCloneCreateButton();
+    }catch(e){
+      stream?.getTracks().forEach(t=>t.stop());
+      recorderState.active=null;
+      $('recordSampleBtn').disabled=false;$('recordConsentBtn').disabled=false;
+      $('sourceVoiceFile').disabled=false;$('consentVoiceFile').disabled=false;
+      setStatus($(kind==='source'?'sampleStatus':'consentStatus'),`Không thể mở micro: ${e.message}. Kiểm tra quyền micro và HTTPS.`, 'err');
+      updateCloneCreateButton();
+    }
+  }
+  function stopCloneRec(kind,automatic=false){
+    const state=recorderState.active;
+    if(!state||state.kind!==kind||state.stopPending)return;
+    const duration=(performance.now()-state.start)/1000;
+    if(!automatic&&duration<(kind==='source'?10.3:4))return;
+    state.stopPending=true;
+    clearInterval(state.ticker);
+    try{if(state.recorder.state!=='inactive')state.recorder.stop()}
+    catch(e){state.stream.getTracks().forEach(t=>t.stop());recorderState.active=null;setStatus($(kind==='source'?'sampleStatus':'consentStatus'),e.message,'err')}
+  }
+  $('recordSampleBtn').onclick=()=>startCloneRec('source');
+  $('stopSampleBtn').onclick=()=>stopCloneRec('source');
+  $('recordConsentBtn').onclick=()=>startCloneRec('consent');
+  $('stopConsentBtn').onclick=()=>stopCloneRec('consent');
+
+  function cloneQualitySummary(info){
+    const lines=[`Thời lượng: ${info.duration.toFixed(1)} giây (đạt 10–30 giây).`,
+      `Độ lớn trung bình: ${info.rms.toFixed(1)} dBFS · đỉnh tín hiệu ${Math.round(info.peak*100)}%.`,
+      `Tỉ lệ khung có âm thanh đáng kể (ước lượng, không phải tỷ lệ lời nói): ${Math.round(info.speechRatio*100)}%.`];
+    const warnings=[];
+    if(info.rms<-35)warnings.push('Giọng khá nhỏ, nên thu gần micro hơn.');
+    if(info.clipping>.003)warnings.push('Có nguy cơ bể tiếng, nên giảm âm lượng/đưa micro xa hơn.');
+    if(info.speechRatio<.18)warnings.push('Có nhiều khoảng lặng, nên thu lại câu nói liên tục.');
+    return {text:lines.join('\n'),warnings};
+  }
+  $('analyzeReplicaBtn').onclick=async()=>{
+    const info=recorderState.source;
+    if(!info)return;
+    try{
+      recorderState.busy=true;updateCloneCreateButton();
+      setStatus($('replicaAnalysisBox'),'Đang đo chất lượng giọng và phân tích...','busy');
+      const local=cloneQualitySummary(info);
+      let summary='';let aiUnavailable='';
+      try{
+        const b64=await fileToBase64(info.blob);
+        const model=$('rewriteModel').value.trim()||'gemini-3.7-flash';
+        const {data}=await geminiFetchWithFailover(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+          key=>({method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
+            body:JSON.stringify({contents:[{parts:[
+              {text:'Phân tích MẪU GIỌNG NGƯỜI NÓI để giúp người dùng quyết định có dùng cho nhân bản giọng không. Trả lời tiếng Việt trong tối đa 110 từ: mô tả âm sắc, cao độ cảm nhận, nhịp nói, mức độ rõ lời, ngữ điệu, mức ồn nền và gợi ý thu lại nếu cần. Không suy đoán danh tính, tuổi, giới tính, sắc tộc, sức khỏe, hay quê quán. Nếu giọng có đặc điểm phát âm vùng miền rõ ràng thì nêu như nhận xét chưa chắc chắn, không gán xuất xứ của người nói. Không nhận diện ai là người nói.'},
+              {inline_data:{mime_type:'audio/wav',data:b64}}]}],generationConfig:{temperature:0.2,maxOutputTokens:350}})}),
+          'Phân tích mẫu giọng');
+        summary=(data?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('\n').trim();
+      }catch(e){aiUnavailable='Phân tích AI chưa khả dụng ('+e.message+').';}
+      recorderState.analysis={quality:local,description:summary};
+      recorderState.analysisOk=local.warnings.length===0;
+      const output=local.text+(local.warnings.length?'\n⚠️ '+local.warnings.join(' '):'\n✓ Chất lượng tín hiệu sơ bộ phù hợp.')+
+        (summary?'\n\n🧠 AI mô tả:\n'+summary:'\n\n'+aiUnavailable);
+      setStatus($('replicaAnalysisBox'),output,recorderState.analysisOk?'ok':'busy');
+      setStatus($('replicaStatus'),recorderState.analysisOk?'Đã phân tích mẫu. Thu lời đồng ý, đặt tên và xác nhận để tạo Voice mới.':'Mẫu có cảnh báo chất lượng. Nên thu lại để tăng độ giống và tránh Google từ chối.',''+(recorderState.analysisOk?'ok':'busy'));
+    }catch(e){setStatus($('replicaAnalysisBox'),e.message,'err')}
+    finally{recorderState.busy=false;updateCloneCreateButton()}
+  };
+
+  $('replicateVoiceBtn').onclick=async()=>{
+    const source=recorderState.source, consent=recorderState.consent;
+    const name=$('replicaName').value.trim();
+    if(recorderState.active||!source||!consent||!recorderState.analysisOk||!name||!$('replicaConsentCheck').checked){
+      setStatus($('replicaStatus'),'Cần thu đủ mẫu, phân tích đạt, thu lời đồng ý, nhập tên và đánh dấu xác nhận của chủ giọng.','err');return;
+    }
+    try{
+      recorderState.busy=true;updateCloneCreateButton();
+      setStatus($('replicaStatus'),'Đang gửi hai bản ghi đã đồng ý cho Google để xác minh và tạo Voice ID...','busy');
+      const sourceB64=await fileToBase64(source.blob),consentB64=await fileToBase64(consent.blob);
+      // For Voice Replication, unlike Prompted Voice Design, Gemini 3.8 Flash TTS supports model= explicitly.
       const {data,keyIndex}=await geminiFetchWithFailover(
         'https://generativelanguage.googleapis.com/v1beta/voices',
-        key=>({
-          method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key},
-          body:JSON.stringify({store:true,voice:{model,type:'replicated',display_name:name,replicated:{source_audio:{mime_type:source.type||'audio/wav',data:sourceB64},consent_audio:{mime_type:consent.type||'audio/wav',data:consentB64}}}})
-        }), 'Gemini Voice Replication'
-      );
-      const id=data?.id || data?.voice?.id;
-      if(!id) throw new Error('Google chưa trả về Voice ID sau khi nhân bản.');
+        key=>({method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
+          body:JSON.stringify({store:true,voice:{model:'gemini-3.8-flash-tts',type:'replicated',display_name:name,
+            replicated:{source_audio:{mime_type:'audio/wav',data:sourceB64},consent_audio:{mime_type:'audio/wav',data:consentB64}}}})}),
+        'Gemini Voice Replication');
+      const id=data?.id||data?.voice?.id||data?.replicated_voice?.id;
+      if(!id)throw Error('Google đã phản hồi nhưng chưa trả Voice ID.');
       lastCreatedVoiceId=id;
       rememberCustomVoice(id,name,'replicated');
-      $('voice').value=id;
+      const item=customVoices.find(x=>x.id===id);
+      if(item){item.keyIndex=keyIndex;item.voiceDescription=recorderState.analysis?.description||''}
+      $('region').value='standard'; // Do not replace the replicated voice with a regional prompt voice.
+      kieManual=false;localStorage.setItem(KIE_MODE_STORAGE,'false');renderKieMode();
+      renderVoices();$('voice').value=id;
+      persistRegionPreferences();
+      $('createdReplicaId').value=id;$('createdReplicaPanel').classList.remove('hidden');
       $('useCustomVoiceBtn').disabled=false;
-      setStatus($('replicaStatus'),`Đã tạo giọng nhân bản “${name}” • ${id} • API 0${keyIndex+1}.`, 'ok');
-      try{await firebaseWrite()}catch(e){}
-    }catch(e){setStatus($('replicaStatus'),e.message,'err')}
-    finally{$('replicateVoiceBtn').disabled=false}
+      try{await firebaseWrite();setStatus($('replicaStatus'),`✅ Đã tạo giọng “${name}” · ${id} · Google API 0${keyIndex+1}. Voice ID đã lưu Firebase. Đã tự chuyển sang Google để đọc đúng giọng nhân bản.`, 'ok')}
+      catch(e){saveLocal();setStatus($('replicaStatus'),`✅ Đã tạo giọng “${name}” · ${id} trên Google API 0${keyIndex+1}; đã lưu trên thiết bị, nhưng Firebase chưa đồng bộ: ${e.message}`, 'busy')}
+    }catch(e){setStatus($('replicaStatus'),`Chưa tạo được Voice: ${e.message}`,'err')}
+    finally{recorderState.busy=false;updateCloneCreateButton()}
   };
+  updateCloneCreateButton();
 
   document.querySelectorAll('#rewriteStyles .pill').forEach(p=>p.onclick=()=>{
     document.querySelectorAll('#rewriteStyles .pill').forEach(x=>x.classList.remove('active'));
@@ -1329,9 +1613,10 @@ ${txt}`;
       const requestedVoice=$('voice').value||'Kore';
       const model=$('ttsModel')?.value || 'gemini-3.8-flash-tts';
       const regionalLock=isRegionalLocked();
-      if(regionalLock&&kieManual)throw Error(`Đang bật Kie nhưng đã khóa giọng ${REGION_LABEL[$('region').value]}. Hãy bấm “Quay lại Google” để dùng Voice Design theo vùng. Nếu chỉ muốn thử Kie, đổi Chế độ vùng miền sang “Chỉ hướng dẫn phát âm” (có thể sai giọng).`);
+      const voiceLock=regionalLock||isCustomVoice(requestedVoice);
+      if(voiceLock&&kieManual)throw Error(`Giọng riêng/giọng vùng miền đang được khóa trên Google, không thể dùng Kie vì sẽ làm đổi giọng. Hãy chọn “Quay lại Google” trước khi tạo audio.`);
       let usingKie=kieManual;
-      const allowKie=()=>!regionalLock&&$('kieAutoFallback').checked&&Boolean(currentKieKey());
+      const allowKie=()=>!voiceLock&&$('kieAutoFallback').checked&&Boolean(currentKieKey());
       const mode=$('stabilityMode').value;
       const chunkSize=parseInt($('chunkSize').value,10)||3000;
       let voice=requestedVoice,style='',resolved={voice:requestedVoice,autoRegional:false,keyIndex:null};
@@ -1362,7 +1647,7 @@ ${txt}`;
           try{
             r=usingKie
               ? await kieGenerateChunk(chunks[i],voice,style,i+1,chunks.length)
-              : await generateTTSChunk(chunks[i],voice,style,i+1,chunks.length,resolved.autoRegional?resolved.keyIndex:null);
+              : await generateTTSChunk(chunks[i],voice,style,i+1,chunks.length,resolved.keyIndex);
           }catch(e){
             if(!usingKie&&regionalLock&&googleFallbackEligible(e)){
               excludedGoogleKeys.push(resolved.keyIndex);
