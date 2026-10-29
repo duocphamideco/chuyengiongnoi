@@ -363,6 +363,22 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
         <button class="btn btn-soft" id="downloadBtn" disabled>⬇️ Tải file WAV</button>
       </div>
     </div>
+
+    <div class="subcard" style="background:#edf8ff">
+      <h3>🔒 Giữ cùng giọng qua nhiều lần tạo</h3>
+      <div id="seriesLockStatus" class="status">Chưa có giọng khóa. Lần tạo đầu tiên sẽ cố định giọng cho các đoạn tiếp theo.</div>
+      <button type="button" class="btn btn-soft" id="resetSeriesBtn">🔓 Bắt đầu giọng mới</button>
+      <p class="small">Bật “Khóa cố định” để giữ nguyên Voice ID, vùng miền, model, nguồn và phong cách giữa các lần tạo. Vẫn cần nghe kiểm tra vì AI có thể thay đổi cách phát âm.</p>
+    </div>
+    <div class="subcard" id="clipsPanel">
+      <h3>5. Các đoạn giọng nói đã tạo</h3>
+      <p class="small">Mỗi lần tạo xong (hoặc duyệt các đoạn dài), âm thanh tự thêm vào đây. Lưu tạm trên trình duyệt này bằng localStorage; file lớn dùng IndexedDB. Không đồng bộ âm thanh lên Firebase. Xóa dữ liệu trình duyệt sẽ mất bản tạm — hãy tải file cần giữ.</p>
+      <div id="clipsList"></div>
+      <div class="row"><div><label>Tên file ghép</label><input id="mergeName" value="IDECO_Giong_noi_ghep"></div><div><label>Khoảng nghỉ giữa đoạn</label><select id="mergeGap"><option value="0">Liền nhau</option><option value="200" selected>0,2 giây</option><option value="500">0,5 giây</option><option value="1000">1 giây</option></select></div></div>
+      <div class="toolbar"><button type="button" class="btn btn-primary" id="mergeClipsBtn">🔗 Ghép các đoạn đã chọn</button><button type="button" class="btn btn-soft" id="clearClipsBtn">🗑 Xóa tất cả đoạn tạm</button></div>
+      <div id="clipsStatus" class="status" aria-live="polite">Đang khôi phục đoạn đã lưu…</div>
+      <div id="mergedPanel" class="hidden"><audio id="mergedAudio" controls></audio><a class="btn btn-good" id="mergedDownload" download="IDECO_Giong_noi_ghep.wav">⬇ Tải file WAV đã ghép</a></div>
+    </div>
     <div id="segmentReview" class="subcard hidden" aria-live="polite" style="background:#fffaf0;border-color:#e9d5a6">
       <h3>🎧 Kiểm duyệt giọng từng đoạn — tránh Bắc/Nam lẫn nhau</h3>
       <p class="small">Mỗi đoạn là một lần AI tổng hợp độc lập. Hãy nghe từng đoạn; nếu bị đổi giọng, bấm <b>🔁 Tạo lại đoạn</b> (sẽ tiêu tốn thêm quota/credit). File cuối chỉ xuất sau khi anh bấm duyệt. Hệ thống không tự nhận diện chính xác giọng vùng miền.</p>
@@ -617,6 +633,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   }
 
   async function firebaseRead(silent=false){
+    if(silent && seriesLock) return null; // Never overwrite an active local voice session in the background.
     const url=FIREBASE_DATABASE_URL, path=escPath($('firebasePath').value);
     if(!url) throw new Error('Chưa nhập Firebase Realtime Database URL.');
     const res=await fetch(`${url}/${path}.json`,{cache:'no-store'});
@@ -807,11 +824,11 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
 
   // A stored Voice Design is owned by the Google project that created it.
   // Avoid reusing a Voice ID under another API key or an older regional prompt (v2).
-  function regionalVoiceKey(region,gender,keyIndex){
+  function regionalVoiceKey(region,gender,keyIndex,baseVoice){
     const apiKey=runtimeKeys[keyIndex] || '';
     let hash=2166136261;
     for(const char of apiKey){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619)}
-    return `${region}__${gender||'neutral'}__v3__api${keyIndex}__${(hash>>>0).toString(36)}`;
+    return `${region}__${gender||'neutral'}__${baseVoice||'Kore'}__v4__api${keyIndex}__${(hash>>>0).toString(36)}`;
   }
 
   function isRegionalLocked(){
@@ -859,10 +876,11 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     const id=data?.id || data?.voice?.id;
     if(!id) throw new Error(`Google chưa trả về Voice ID cho giọng ${REGION_LABEL[region]}.`);
     rememberCustomVoice(id,displayName,'prompted');
+    Object.assign(customVoices.find(v=>v.id===id),{keyIndex,region,baseVoice});
     const sample=data?.prompted?.sample_audio?.data || data?.prompted?.sampleAudio?.data || data?.sample_audio?.data || data?.sampleAudio?.data;
     const mime=data?.prompted?.sample_audio?.mime_type || data?.prompted?.sampleAudio?.mimeType || data?.sample_audio?.mime_type || data?.sampleAudio?.mimeType || 'audio/wav';
     if(sample) setVoicePreviewFromBase64(sample,mime);
-    regionalVoiceIds[regionalVoiceKey(region,gender,keyIndex)]={id,name:displayName,region,gender,createdAt:new Date().toISOString(),version:3,keyIndex};
+    regionalVoiceIds[regionalVoiceKey(region,gender,keyIndex,baseVoice)]={id,name:displayName,region,gender,createdAt:new Date().toISOString(),version:3,keyIndex};
     try{saveLocal();await firebaseWrite()}catch(e){
       setStatus($('voiceDesignStatus'),`Đã tạo Voice ID ${id} nhưng chưa đồng bộ Firebase: ${e.message}`,'err');
     }
@@ -873,7 +891,8 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
   async function resolveVoiceForRegion(baseVoice,excludedKeyIndices=[],forceNew=false){
     const region=$('region')?.value || 'standard';
     const mode=$('regionMode')?.value || 'locked';
-    const cloned=customVoices.find(v=>v.id===baseVoice && v.type==='replicated');
+    const cloned=customVoices.find(v=>v.id===baseVoice);
+    if(isCustomVoice(baseVoice) && !forceNew) return {voice:baseVoice,autoRegional:false,keyIndex:Number.isInteger(cloned?.keyIndex)?cloned.keyIndex:null};
     if(cloned) return {voice:baseVoice,autoRegional:false,keyIndex:Number.isInteger(cloned.keyIndex)?cloned.keyIndex:null};
     if(region==='standard' || mode!=='locked') return {voice:baseVoice,autoRegional:false,keyIndex:null};
     const gender=inferVoiceGender(baseVoice);
@@ -881,7 +900,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
     if(!keys.length) throw new Error(`Không còn Google API khả dụng để tạo giọng ${REGION_LABEL[region]}. Không tự chuyển sang Kie vì có thể sai vùng.`);
     if(!forceNew){
       for(const item of keys){
-        const cached=regionalVoiceIds[regionalVoiceKey(region,gender,item.index)];
+        const cached=regionalVoiceIds[regionalVoiceKey(region,gender,item.index,baseVoice)];
         if(cached?.id&&cached.region===region&&cached.gender===gender&&cached.version===3){
           rememberCustomVoice(cached.id,cached.name||`IDECO ${REGION_LABEL[region]}`,'prompted');
           return {voice:cached.id,autoRegional:true,cached:true,gender,keyIndex:item.index};
@@ -1037,6 +1056,7 @@ details.advanced summary{cursor:pointer;font-weight:850;color:#315477}
       if(!id) throw new Error('Google chưa trả về Voice ID.');
       lastCreatedVoiceId=id;
       rememberCustomVoice(id,name,'prompted');
+      Object.assign(customVoices.find(v=>v.id===id),{keyIndex});
       $('voice').value=id;
       $('useCustomVoiceBtn').disabled=false;
       const sample=data?.sample_audio?.data || data?.sampleAudio?.data;
@@ -1667,11 +1687,11 @@ ${txt}`;
   }
   // Review makes the limitation explicit: no dependable automatic Vietnamese-accent
   // recognition can be inferred from a Voice ID alone.
-  const REVIEW_CONTROLS=['kieStyleConsent','kieApproxVoice','gender','voice','region','regionMode','readStyle','pace','emotion','emotionLevel','emphasis','pauseStyle','voiceInstruction','stabilityMode','chunkSize','strictVoiceLock','kieToggle','kieAutoFallback'];
+  const REVIEW_CONTROLS=['ttsModel','kieModel','openSettings','createVoiceBtn','useCustomVoiceBtn','useManualVoiceBtn','replicateVoiceBtn','previewRegionalBtn','refreshRegionalBtn','resetSeriesBtn','kieStyleConsent','kieApproxVoice','gender','voice','region','regionMode','readStyle','pace','emotion','emotionLevel','emphasis','pauseStyle','voiceInstruction','stabilityMode','chunkSize','strictVoiceLock','kieToggle','kieAutoFallback'];
   function lockGenerationControls(on){
     generationInProgress=on;
     for(const id of REVIEW_CONTROLS){const el=$(id);if(el)el.disabled=on;}
-    $('ttsBtn').disabled=on;
+    $('ttsBtn').disabled=on||clipBusy;
   }
   function clearReview(){
     voiceReviewSession=null;
@@ -1698,7 +1718,8 @@ ${txt}`;
       return pcm16ToWav(concatPCM(results.map(r=>r.bytes),90,24000,1),24000,1);
     throw Error('Các đoạn âm thanh không cùng WAV/PCM nên không thể ghép an toàn.');
   }
-  function publishMergedAudio(blob){
+  function publishMergedAudio(blob,meta=null){
+    if(meta) queueClip(blob,meta);
     wavBlob=blob;
     if(objectUrl)URL.revokeObjectURL(objectUrl);
     objectUrl=URL.createObjectURL(blob);
@@ -1734,11 +1755,13 @@ ${txt}`;
     $('segmentReview').classList.remove('hidden');
   }
   $('approveSegmentsBtn').onclick=()=>{
+    if($('approveSegmentsBtn').disabled)return;
     if(!voiceReviewSession)return;
     try{
       const blob=mergeTTSResults(voiceReviewSession.results);
-      publishMergedAudio(blob);
+      publishMergedAudio(blob,voiceReviewSession);
       $('segmentReview').classList.add('hidden');
+      $('approveSegmentsBtn').disabled=true;
       setStatus($('ttsStatus'),`✅ Anh đã duyệt ${voiceReviewSession.results.length} đoạn. File WAV đã sẵn sàng. ${voiceReviewSession.usingKie?'Giọng nền Kie':'Voice ID'}: ${voiceReviewSession.voice} · ${REGION_LABEL[voiceReviewSession.region]}.`,'ok');
       $('audio').play().catch(()=>{});
     }catch(e){setStatus($('segmentReviewStatus'),e.message,'err')}
@@ -1766,18 +1789,24 @@ ${txt}`;
       const kieApproxMode=Boolean(voiceLock && kieApproxAllowed());
       if(voiceLock&&kieManual&&!kieApproxMode)throw Error(`Voice Design/Clone ID của Google không chạy trên API Kie. Để giữ đúng giọng, bấm “Quay lại Google”. Nếu chấp nhận giọng khác, tích chọn mục “Tôi đồng ý dùng giọng dựng sẵn” và chọn giọng nền Kie.`);
       let usingKie=kieManual;
-      const allowKie=()=>!voiceLock&&$('kieAutoFallback').checked&&Boolean(currentKieKey());
+      const allowKie=()=>!$('strictVoiceLock').checked&&!voiceLock&&$('kieAutoFallback').checked&&Boolean(currentKieKey());
       const mode=$('stabilityMode').value;
       const chunkSize=parseInt($('chunkSize').value,10)||3000;
       let voice=requestedVoice,style='',resolved={voice:requestedVoice,autoRegional:false,keyIndex:null};
-      let results=[],usedKeys=[];
+      let results=[],usedKeys=[],chunks=[];
+      const signature=seriesSignature();
+      if($('strictVoiceLock').checked && seriesLock && seriesLock.signature!==signature) throw Error('Thiết lập đã khác giọng đang khóa. Hãy khôi phục thiết lập cũ hoặc bấm Bắt đầu giọng mới trước khi tạo.');
+      if($('strictVoiceLock').checked && seriesLock?.keyToken && runtimeKeys[seriesLock.keyIndex]!==seriesLock.keyToken) throw Error('API của giọng đang khóa đã thay đổi. Khôi phục API cũ hoặc bắt đầu giọng mới.');
       let pinnedKeyIndex=null;
       const excludedGoogleKeys=[];
 
       // Restart the entire recording when switching Google projects or providers.
       // A designed Voice ID only exists in the Google project that created it.
       while(true){
-        if(!usingKie){
+        if($('strictVoiceLock').checked && seriesLock){
+          usingKie=seriesLock.usingKie;
+          resolved={voice:seriesLock.voice,autoRegional:seriesLock.autoRegional,keyIndex:seriesLock.keyIndex};
+        }else if(!usingKie){
           try{resolved=await resolveVoiceForRegion(requestedVoice,excludedGoogleKeys)}
           catch(e){
             if(allowKie()&&googleFallbackEligible(e)){usingKie=true;resolved={voice:requestedVoice,autoRegional:false,keyIndex:null}}
@@ -1793,8 +1822,9 @@ ${txt}`;
           const designedHint=($('voiceDesignPrompt')?.value||'').trim().slice(0,500);
           style=`${style}; speak all text in Vietnamese with consistent ${regionLabel} regional pronunciation, steady vocal color and cadence, use ONE speaker throughout. ${voiceName?`Preferred identity description: ${voiceName}.`:''} ${designedHint?`Voice-character guidance: ${designedHint}.`:''} Do not suddenly switch between Northern and Southern Vietnamese accents.`;
         }
+        if($('strictVoiceLock').checked && seriesLock) style=seriesLock.style;
         const useChunks=usingKie||mode==='chunk'||(mode==='auto'&&txt.length>10000);
-        const chunks=useChunks?splitTextForTTS(txt,usingKie?Math.min(chunkSize,1800):chunkSize):[txt];
+        chunks=useChunks?splitTextForTTS(txt,usingKie?Math.min(chunkSize,1800):chunkSize):[txt];
         results=[];usedKeys=[];pinnedKeyIndex=resolved.keyIndex;
         setStatus($('ttsStatus'),`Đang tạo ${chunks.length} đoạn • ${REGION_LABEL[$('region').value]} • ${resolved.autoRegional?'🔒 Voice ID '+voice:voice} • ${usingKie?'Kie':`Google API 0${(resolved.keyIndex??activeKeyIndex)+1}`}...`,'busy');
         let restart=false;
@@ -1806,7 +1836,8 @@ ${txt}`;
               ? await kieGenerateChunk(chunks[i],voice,style,i+1,chunks.length,kieModel)
               : await generateTTSChunk(chunks[i],voice,style,i+1,chunks.length,pinnedKeyIndex,model);
           }catch(e){
-            if(!usingKie&&(regionalLock||$('strictVoiceLock').checked)&&googleFallbackEligible(e)){
+            if($('strictVoiceLock').checked) throw Error('Giọng đã khóa: dừng khi API lỗi, không đổi Voice ID/nguồn. '+e.message);
+            if(!usingKie&&regionalLock&&googleFallbackEligible(e)){
               excludedGoogleKeys.push(pinnedKeyIndex ?? resolved.keyIndex);
               const available=(await ensureKeys()).filter(x=>!excludedGoogleKeys.includes(x.index));
               if(!available.length)throw Error(`Không thể tạo audio giọng ${REGION_LABEL[$('region').value]} với các Google API hiện có: ${e.message}. Ứng dụng đã DỪNG thay vì tự đổi sang giọng miền khác qua Kie.`);
@@ -1821,6 +1852,11 @@ ${txt}`;
             throw e;
           }
           if(!usingKie && $('strictVoiceLock').checked && pinnedKeyIndex===null) pinnedKeyIndex=r.keyIndex;
+          if($('strictVoiceLock').checked && !seriesLock){
+            seriesLock={signature,voice,style,usingKie,model,kieModel,region:lockedRegion,keyIndex:pinnedKeyIndex,autoRegional:resolved.autoRegional,keyToken:runtimeKeys[pinnedKeyIndex]||''};
+            try{localStorage.setItem(SERIES_KEY,JSON.stringify(seriesLock))}catch(e){}
+            renderSeriesLock();
+          }
           results.push(r);usedKeys.push(r.source==='Kie'?'KIE':r.keyIndex+1);
         }
         if(!restart)break;
@@ -1835,7 +1871,7 @@ ${txt}`;
         showReview(session);
         setStatus($('ttsStatus'),`Đã tạo ${results.length} đoạn · ${REGION_LABEL[lockedRegion]} · Voice ${voice} · ${usingKie?kieModel:model} · API ${keys}. Anh nghe từng đoạn bên dưới, tạo lại đoạn sai vùng nếu cần, rồi bấm “Duyệt — Ghép file WAV”. Chưa xuất file để tránh lẫn giọng.`, 'busy');
       }else{
-        publishMergedAudio(mergeTTSResults(results));
+        publishMergedAudio(mergeTTSResults(results),{voice,region:lockedRegion,usingKie,model,kieModel,style});
         setStatus($('ttsStatus'),`Đã tạo audio • ${usingKie?kieModel:model} • ${REGION_LABEL[lockedRegion]} • ${usingKie?'Giọng nền Kie':resolved.autoRegional?'🔒 Voice Design Google':'Voice'} ${voice} • API: ${keys}. ${usingKie&&kieApproxMode?'⚠️ Đã dùng giọng nền Kie thay cho Voice ID Google theo lựa chọn của anh. ':''}${!resolved.autoRegional&&lockedRegion!=='standard'?'Cần nghe kiểm tra vì đây chỉ là hướng dẫn accent.':''}`, 'ok');
         $('audio').play().catch(()=>{});
       }
@@ -1852,7 +1888,107 @@ ${txt}`;
   };
 
   $('strictVoiceLock').addEventListener('change',()=>{localStorage.setItem('ideco_strict_voice_lock_v1',String($('strictVoiceLock').checked));});
+  const SERIES_KEY='ideco_voice_series_v2', CLIPS_KEY='ideco_voice_clips_v2';
+  let seriesLock=null,clips=[],clipUrls=[],mergedUrl=null,clipBusy=false,clipSave=Promise.resolve();
+  try{seriesLock=JSON.parse(localStorage.getItem(SERIES_KEY)||'null')}catch(e){}
+  function seriesSignature(){return JSON.stringify([$('voice').value,$('gender').value,$('region').value,$('regionMode').value,kieManual,selectedKieModel(),$('ttsModel').value,$('readStyle').value,$('pace').value,$('emotion').value,$('emotionLevel').value,$('emphasis').value,$('pauseStyle').value,$('voiceInstruction').value,$('kieApproxVoice').value,$('kieStyleConsent').checked]);}
+  function renderSeriesLock(){setStatus($('seriesLockStatus'),seriesLock?`🔒 Đang giữ ${seriesLock.voice} · ${REGION_LABEL[seriesLock.region]} · ${seriesLock.usingKie?'Kie':'Google'} qua các lần tạo. Muốn đổi giọng, bấm “Bắt đầu giọng mới”.`:'Chưa có giọng khóa. Lần tạo đầu tiên sẽ cố định giọng cho các đoạn tiếp theo.');}
+  $('resetSeriesBtn').onclick=()=>{if(generationInProgress)return;seriesLock=null;try{localStorage.removeItem(SERIES_KEY)}catch(e){}renderSeriesLock();};
+  function clipDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('IDECO_Voice_Clips_V2',1);r.onupgradeneeded=()=>r.result.createObjectStore('audio');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
+  async function dbClip(action,id,value){const db=await clipDB();try{return await new Promise((resolve,reject)=>{const tx=db.transaction('audio',action==='get'?'readonly':'readwrite');const st=tx.objectStore('audio');const r=action==='get'?st.get(id):action==='put'?st.put(value,id):st.delete(id);tx.oncomplete=()=>resolve(r.result);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('Không lưu được âm thanh'));});}finally{db.close()}}
+  function dataURL(blob){return new Promise((resolve,reject)=>{const f=new FileReader();f.onload=()=>resolve(f.result);f.onerror=()=>reject(f.error);f.readAsDataURL(blob);});}
+  function fromDataURL(data){const [head,b64]=data.split(',');return new Blob([base64ToBytes(b64)],{type:head.split(':')[1].split(';')[0]});}
+  function clipMeta(c){return {id:c.id,name:c.name,voice:c.voice,region:c.region,source:c.source,model:c.model,style:c.style,selected:c.selected,created:c.created,storage:c.storage,size:c.blob?.size||c.size};}
+  function saveClipIndex(){localStorage.setItem(CLIPS_KEY,JSON.stringify(clips.map(clipMeta)));}
+  async function persistClip(c){
+    const key=CLIPS_KEY+'_'+c.id;
+    try{
+      let cached=0;for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith(CLIPS_KEY+'_'))cached+=(localStorage.getItem(k)||'').length;}
+      if(c.blob.size>750000||cached+c.blob.size*1.4>1500000)throw Error('Dùng bộ nhớ dung lượng cao');
+      localStorage.setItem(key,await dataURL(c.blob));c.storage='localStorage';
+    }catch(e){await dbClip('put',c.id,c.blob);c.storage='IndexedDB';}
+    try{saveClipIndex()}catch(e){
+      // Preserve recoverable metadata together with audio when localStorage is full.
+      await dbClip('put','index',clips.map(clipMeta));
+    }
+    // Keep the recovery index current even after later edits.
+    try{await dbClip('put','index',clips.map(clipMeta))}catch(e){}
+  }
+  function queueClip(blob,meta){
+    const c={id:Date.now().toString(36)+'_'+Math.random().toString(36).slice(2),name:'Giọng nói '+(clips.length+1),blob,voice:meta.voice,region:meta.region,source:meta.usingKie?'Kie':'Google',model:meta.usingKie?meta.kieModel:meta.model,style:meta.style,selected:true,created:new Date().toISOString(),storage:'Chưa lưu'};
+    clips.push(c);renderClips();setStatus($('clipsStatus'),'Đã thêm '+c.name+' · đang lưu tạm…','busy');
+    clipSave=clipSave.then(async()=>{try{await persistClip(c);setStatus($('clipsStatus'),'Đã lưu tạm '+c.name+' bằng '+c.storage+'. Anh có thể nhập nội dung và tạo đoạn tiếp theo.','ok');}catch(e){c.storage='Chỉ trong phiên này';setStatus($('clipsStatus'),'Không lưu được vào trình duyệt: '+e.message+'. Đoạn vẫn đang ở đây; hãy tải ngay trước khi đóng trang.','err');}renderClips();});
+  }
+  async function restoreClips(){
+    clipBusy=true;renderClips();let records=[];
+    try{records=await dbClip('get','index')||JSON.parse(localStorage.getItem(CLIPS_KEY)||'[]')}catch(e){try{records=JSON.parse(localStorage.getItem(CLIPS_KEY)||'[]')}catch(e2){}}
+    let missing=0;
+    for(const c of records){try{const blob=c.storage==='localStorage'?fromDataURL(localStorage.getItem(CLIPS_KEY+'_'+c.id)||''):await dbClip('get',c.id);if(!blob)throw Error('Thiếu dữ liệu');clips.push({...c,blob});}catch(e){missing++;}}
+    clipBusy=false;renderClips();setStatus($('clipsStatus'),missing?`Khôi phục ${clips.length} đoạn; ${missing} đoạn không còn dữ liệu.`:`Đã sẵn sàng · ${clips.length} đoạn được lưu tạm.`,missing?'err':'ok');
+  }
+  function invalidateMerged(){if(mergedUrl)URL.revokeObjectURL(mergedUrl);mergedUrl=null;$('mergedPanel').classList.add('hidden');$('mergedAudio').removeAttribute('src');}
+  async function updateClips(){invalidateMerged();try{saveClipIndex()}catch(e){}try{await dbClip('put','index',clips.map(clipMeta))}catch(e){}renderClips();}
+  function downloadClip(c){const u=URL.createObjectURL(c.blob),a=document.createElement('a');a.href=u;a.download=c.name.replace(/[\\/:*?"<>|]/g,'_')+(/mpeg|mp3/.test(c.blob.type)?'.mp3':/wav/.test(c.blob.type)?'.wav':'.audio');a.click();setTimeout(()=>URL.revokeObjectURL(u),20000);}
+  function renderClips(){
+    clipUrls.forEach(u=>URL.revokeObjectURL(u));clipUrls=[];const wrap=$('clipsList');wrap.replaceChildren();
+    clips.forEach((c,i)=>{
+      const row=document.createElement('div');row.className='subcard';const head=document.createElement('div');head.className='inline';
+      const check=document.createElement('input');check.type='checkbox';check.checked=c.selected;check.style.width='auto';check.disabled=clipBusy;check.onchange=()=>{c.selected=check.checked;updateClips();};check.setAttribute('aria-label','Chọn '+c.name);
+      const name=document.createElement('input');name.value=c.name;name.disabled=clipBusy;name.setAttribute('aria-label','Tên đoạn '+(i+1));name.onchange=()=>{c.name=name.value.trim()||'Giọng nói '+(i+1);updateClips();};head.append(check,name);
+      const detail=document.createElement('div');detail.className='small';detail.textContent=`${i+1}. ${REGION_LABEL[c.region]||c.region} · ${c.voice} · ${c.source} · ${(c.blob.size/1048576).toFixed(2)} MB · ${c.storage}`;
+      const aud=document.createElement('audio');aud.controls=true;const u=URL.createObjectURL(c.blob);clipUrls.push(u);aud.src=u;aud.preload='metadata';
+      const bar=document.createElement('div');bar.className='toolbar';
+      [['↑',i===0,async()=>{[clips[i-1],clips[i]]=[clips[i],clips[i-1]];await updateClips();}],['↓',i===clips.length-1,async()=>{[clips[i+1],clips[i]]=[clips[i],clips[i+1]];await updateClips();}],['⬇ Tải đoạn',false,()=>downloadClip(c)],['🗑 Xóa',false,async()=>{await clipSave;clips=clips.filter(x=>x.id!==c.id);try{localStorage.removeItem(CLIPS_KEY+'_'+c.id)}catch(e){}try{await dbClip('delete',c.id)}catch(e){}await updateClips();}]].forEach(([label,off,fn])=>{const b=document.createElement('button');b.type='button';b.className='btn btn-soft';b.textContent=label;b.disabled=off||clipBusy;b.onclick=fn;bar.append(b);});
+      row.append(head,detail,aud,bar);wrap.append(row);
+    });
+    if(!clips.length)wrap.textContent='Chưa có đoạn nào. Tạo giọng nói đầu tiên ở phía trên.';
+    $('mergeClipsBtn').disabled=clipBusy||!clips.some(c=>c.selected);$('clearClipsBtn').disabled=clipBusy||!clips.length;
+    $('ttsBtn').disabled=clipBusy||generationInProgress;
+  }
+  $('clearClipsBtn').onclick=async()=>{
+    if(!confirm('Xóa tất cả đoạn giọng nói lưu tạm? File đã tải về vẫn được giữ.'))return;
+    clipBusy=true;renderClips();await clipSave;
+    for(const c of clips){try{localStorage.removeItem(CLIPS_KEY+'_'+c.id)}catch(e){}try{await dbClip('delete',c.id)}catch(e){}}
+    clips=[];await updateClips();clipBusy=false;renderClips();setStatus($('clipsStatus'),'Đã xóa các đoạn tạm.');
+  };
+  $('mergeClipsBtn').onclick=async()=>{
+    if(clipBusy)return;clipBusy=true;renderClips();await clipSave;let ctx;
+    try{
+      const selected=clips.filter(c=>c.selected);if(!selected.length)throw Error('Chọn ít nhất một đoạn.');
+      // Same provider, model, voice and region are required for a consistent compilation.
+      const identity=c=>JSON.stringify([c.voice,c.region,c.source,c.model]);
+      if(!selected.every(c=>identity(c)===identity(selected[0])))throw Error('Các đoạn đã chọn khác giọng, vùng miền, nguồn hoặc model. Hãy chỉ chọn các đoạn cùng giọng để ghép nhất quán.');
+      setStatus($('clipsStatus'),'Đang giải mã và ghép '+selected.length+' đoạn…','busy');
+      const AudioCtx=window.AudioContext||window.webkitAudioContext;ctx=new AudioCtx({sampleRate:24000});
+      const gap=Number($('mergeGap').value)||0, sr=ctx.sampleRate;let total=0;const decoded=[];
+      for(const c of selected){const b=await ctx.decodeAudioData(await c.blob.arrayBuffer());decoded.push(b);total+=b.length;}
+      total+=Math.round(sr*gap/1000)*Math.max(0,decoded.length-1);
+      if(total*2>200*1024*1024)throw Error('File ghép quá lớn. Hãy ghép ít đoạn hơn (tối đa 200 MB mỗi file).');
+      const pcm=new Uint8Array(total*2),dv=new DataView(pcm.buffer);let offset=0;
+      for(let j=0;j<decoded.length;j++){
+        const b=decoded[j],channels=Array.from({length:b.numberOfChannels},(_,i)=>b.getChannelData(i));
+        for(let i=0;i<b.length;i++){let v=0;for(const ch of channels)v+=ch[i];v=Math.max(-1,Math.min(1,v/channels.length));dv.setInt16((offset+i)*2,Math.round(v*(v<0?32768:32767)),true);}
+        offset+=b.length;if(j<decoded.length-1)offset+=Math.round(sr*gap/1000);
+      }
+      const blob=pcm16ToWav(pcm,sr,1);invalidateMerged();mergedUrl=URL.createObjectURL(blob);$('mergedAudio').src=mergedUrl;$('mergedDownload').href=mergedUrl;$('mergedDownload').download=($('mergeName').value.trim()||'IDECO_Giong_noi_ghep').replace(/[\\/:*?"<>|]/g,'_').replace(/\.wav$/i,'')+'.wav';$('mergedPanel').classList.remove('hidden');
+      setStatus($('clipsStatus'),`✅ Đã ghép ${selected.length} đoạn · ${(total/sr).toFixed(1)} giây · ${(blob.size/1048576).toFixed(2)} MB. Nghe lại rồi tải file WAV bên dưới.`,'ok');
+    }catch(e){setStatus($('clipsStatus'),'Không ghép được: '+e.message,'err');}
+    finally{if(ctx)await ctx.close();clipBusy=false;renderClips();}
+  };
+
   loadLocal(); renderVoices(); updateCount(); updateRegionLockStatus();
+  if(seriesLock){
+    try{
+      const values=JSON.parse(seriesLock.signature);
+      const fields=['voice','gender','region','regionMode',null,'kieModel','ttsModel','readStyle','pace','emotion','emotionLevel','emphasis','pauseStyle','voiceInstruction','kieApproxVoice'];
+      $('gender').value=values[1];renderVoices();
+      fields.forEach((id,i)=>{if(id && values[i]!==undefined)$(id).value=values[i]});
+      kieManual=Boolean(values[4]);renderKieMode();
+      // Consent for a substitute remains a fresh user choice on every page load.
+      updateRegionLockStatus();
+    }catch(e){}
+  }
+  renderSeriesLock(); restoreClips();
 
   // Try auto-sync only if a Firebase URL was already saved on this device.
   setTimeout(async()=>{
